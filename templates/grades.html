@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grades</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .grade-info {
+            display: none;
+        }
+        tr:hover .grade-info {
+            display: table-row;
+        }
+    </style>
+    <script>
+        function switchTerm(term) {
+            fetch(`/grades?term=${term}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('tbody');
+                    tbody.innerHTML = '';
+                    for (const [subject, subject_grades] of Object.entries(data.grades)) {
+                        let row = `<tr><td>${subject}</td>`;
+                        for (const grade of subject_grades) {
+                            if (grade.percent !== null) {
+                                row += `<td>${grade.percent}%</td>`;
+                            } else if (grade.max_points !== null) {
+                                row += `<td>${grade.grade_n} / ${grade.max_points}</td>`;
+                            } else {
+                                row += `<td>${grade.grade_n}</td>`;
+                            }
+                        }
+                        row += '</tr>';
+                        tbody.innerHTML += row;
+                        for (const grade of subject_grades) {
+                            tbody.innerHTML += `
+                                <tr class="grade-info">
+                                    <td colspan="${subject_grades.length + 1}">
+                                        <strong>Title:</strong> ${grade.title}<br>
+                                        <strong>Date:</strong> ${grade.date}
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    }
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>Grades</h1>
+    <button onclick="switchTerm(1)">First Term</button>
+    <button onclick="switchTerm(2)">Second Term</button>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Grade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for subject, subject_grades in grades.items() %}
+                <tr>
+                    <td>{{ subject }}</td>
+                    {% for grade in subject_grades %}
+                        <td>
+                            {% if grade.percent is not none %}
+                                {{ grade.percent }}%
+                            {% elif grade.max_points is not none %}
+                                {{ grade.grade_n }} / {{ grade.max_points }}
+                            {% else %}
+                                {{ grade.grade_n }}
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% for grade in subject_grades %}
+                    <tr class="grade-info">
+                        <td colspan="{{ subject_grades|length + 1 }}">
+                            <strong>Title:</strong> {{ grade.title }}<br>
+                            <strong>Date:</strong> {{ grade.date }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

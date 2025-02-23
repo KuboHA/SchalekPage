@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Dashboard</h1>
+    <p>Welcome, {{ student.name }}!</p>
+    <button onclick="location.href='{{ url_for('timetable_changes') }}'">View Timetable Changes</button>
+    <button onclick="location.href='{{ url_for('grades') }}'">View Grades</button>
+</body>
+</html>

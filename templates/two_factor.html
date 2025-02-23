@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Two-Factor Authentication</title>
+</head>
+<body>
+    <h1>Two-Factor Authentication</h1>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+    <form method="POST" action="{{ url_for('two_factor') }}">
+        <label for="code">2FA Code:</label>
+        <input type="text" id="code" name="code" required><br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

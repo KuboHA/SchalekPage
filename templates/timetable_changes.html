@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Timetable Changes</title>
+</head>
+<body>
+    <h1>Timetable Changes</h1>
+    <ul>
+        {% for change in changes %}
+            <li>{{ change.title }} - Lesson {{ change.lesson_n }} - {{ change.action }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
