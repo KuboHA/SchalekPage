@@ -116,7 +116,7 @@ def timetable_changes():
 
     # Fetch timetable changes for a specific date
     substitution = Substitution(edupage)
-    specific_date = date(2025, 2, 21)
+    specific_date = date(2025, 3, 3)
     changes = substitution.get_timetable_changes(specific_date)
 
     if changes is None:
@@ -154,9 +154,9 @@ def grades():
 
     return render_template('grades.html', grades=grades)
 
-@app.route('/lunches', methods=['GET'])
-def lunches():
-    if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
+@app.route('/subjects', methods=['GET'])
+def subjects():
+     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
         return redirect(url_for('index'))
 
     # Recreate the Edupage object
@@ -164,17 +164,27 @@ def lunches():
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-    # Fetch lunch information
+    subjects = Subject(edupage)
+    
+
+@app.route('/lunches', methods=['GET'])
+def lunches():
+    if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
+        return redirect(url_for('index'))
+
+    edupage = Edupage()
+    edupage.login(session['username'], session['password'], session['subdomain'])
+    edupage.session.cookies.set('PHPSESSID', session['session_id'])
+
     lunches_module = Lunches(edupage)
-    specific_date = date(2025, 2, 21)
-    lunches = lunches_module.get_meals(specific_date)  # Replace this with the actual method to fetch lunch data
+    specific_date = date(2025, 3, 3)
+    lunches = lunches_module.get_meals(specific_date)
 
-    if lunches is None:
+    # Extract the meals list properly
+    if hasattr(lunches, 'meals'):
+        lunches = lunches.meals  # Extract meals if it's a structured object
+    else:
         lunches = []
-
-    # Convert the lunches to a list if it is not already iterable
-    if not isinstance(lunches, list):
-        lunches = list(lunches)
 
     return render_template('lunches.html', lunches=lunches)
 
