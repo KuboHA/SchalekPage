@@ -5,12 +5,14 @@ from edupage_api.messages import Messages  # Import the Messages class
 from edupage_api.substitution import Substitution, TimetableChange
 from edupage_api.grades import Grades, EduGrade
 from edupage_api.lunches import Lunches  # Import the Lunches class
-from datetime import datetime, date
+from edupage_api.ringing import RingingTimes, RingingType, RingingTime  # Import the Ringing classes
+from datetime import datetime, date, timedelta
 from typing import Optional, Union
 from collections import defaultdict
+import re
 
 app = Flask(__name__)
-app.secret_key = ''  # Change this to a real secret key in production
+app.secret_key = '738-531-827'  # Change this to a real secret key in production
 
 class EduStudent:
     def __init__(self, person_id: int, name: str, gender: str, in_school_since: Optional[datetime], class_id: int, number_in_class: int):
@@ -43,7 +45,7 @@ def login():
     subdomain = request.form['subdomain']
 
     # Format the username from NameSurname to Name Surname
-    formatted_username = ' '.join([username[:username.find('S')], username[username.find('S'):]])
+    formatted_username = re.sub(r'(?<!^)(?=[A-Z])', ' ', username)
 
     edupage = Edupage()
     try:
@@ -66,7 +68,7 @@ def login():
             return redirect(url_for('dashboard'))
     except Exception as e:
         return render_template('login.html', error=str(e))
-    
+
 @app.route('/two_factor', methods=['GET', 'POST'])
 def two_factor():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
@@ -121,7 +123,11 @@ def dashboard():
     # Fetch notifications
     notifications = edupage.get_notifications()
 
-    return render_template('dashboard.html', student=student, notifications=notifications, event_type_map=EVENT_TYPE_MAP, event_type_icons=EVENT_TYPE_ICONS)
+    # Fetch next ringing time
+    ringing_times = RingingTimes(edupage)
+    next_ringing_time = ringing_times.get_next_ringing_time(datetime.now())
+
+    return render_template('dashboard.html', student=student, notifications=notifications, next_ringing_time=next_ringing_time, event_type_map=EVENT_TYPE_MAP, event_type_icons=EVENT_TYPE_ICONS)
 
 @app.route('/search_teacher')
 def search_teacher():
@@ -412,4 +418,3 @@ EVENT_TYPE_ICONS = {
 
 if __name__ == '__main__':
     app.run(debug=True)
-
