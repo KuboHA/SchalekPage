@@ -10,7 +10,7 @@ from typing import Optional, Union
 from collections import defaultdict
 
 app = Flask(__name__)
-app.secret_key = '738-531-827'  # Change this to a real secret key in production
+app.secret_key = ''  # Change this to a real secret key in production
 
 class EduStudent:
     def __init__(self, person_id: int, name: str, gender: str, in_school_since: Optional[datetime], class_id: int, number_in_class: int):
