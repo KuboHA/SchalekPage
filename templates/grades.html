@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Grades</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .grade-info {
             display: none;
@@ -20,14 +20,14 @@
                     const tbody = document.querySelector('tbody');
                     tbody.innerHTML = '';
                     for (const [subject, subject_grades] of Object.entries(data.grades)) {
-                        let row = `<tr><td>${subject}</td>`;
+                        let row = `<tr><td class="py-2 px-4 text-gray-200">${subject}</td>`;
                         for (const grade of subject_grades) {
                             if (grade.percent !== null) {
-                                row += `<td>${grade.percent}%</td>`;
+                                row += `<td class="py-2 px-4 text-gray-200">${grade.percent}%</td>`;
                             } else if (grade.max_points !== null) {
-                                row += `<td>${grade.grade_n} / ${grade.max_points}</td>`;
+                                row += `<td class="py-2 px-4 text-gray-200">${grade.grade_n} / ${grade.max_points}</td>`;
                             } else {
-                                row += `<td>${grade.grade_n}</td>`;
+                                row += `<td class="py-2 px-4 text-gray-200">${grade.grade_n}</td>`;
                             }
                         }
                         row += '</tr>';
@@ -35,7 +35,7 @@
                         for (const grade of subject_grades) {
                             tbody.innerHTML += `
                                 <tr class="grade-info">
-                                    <td colspan="${subject_grades.length + 1}">
+                                    <td colspan="${subject_grades.length + 1}" class="py-2 px-4 text-gray-200">
                                         <strong>Title:</strong> ${grade.title}<br>
                                         <strong>Date:</strong> ${grade.date}
                                     </td>
@@ -47,43 +47,58 @@
         }
     </script>
 </head>
-<body>
-    <h1>Grades</h1>
-    <button onclick="switchTerm(1)">First Term</button>
-    <button onclick="switchTerm(2)">Second Term</button>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Subject</th>
-                <th>Grade</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for subject, subject_grades in grades.items() %}
-                <tr>
-                    <td>{{ subject }}</td>
-                    {% for grade in subject_grades %}
-                        <td>
-                            {% if grade.percent is not none %}
-                                {{ grade.percent }}%
-                            {% elif grade.max_points is not none %}
-                                {{ grade.grade_n }} / {{ grade.max_points }}
-                            {% else %}
-                                {{ grade.grade_n }}
-                            {% endif %}
-                        </td>
-                    {% endfor %}
-                </tr>
-                {% for grade in subject_grades %}
-                    <tr class="grade-info">
-                        <td colspan="{{ subject_grades|length + 1 }}">
-                            <strong>Title:</strong> {{ grade.title }}<br>
-                            <strong>Date:</strong> {{ grade.date }}
-                        </td>
+<body class="bg-gradient-to-r from-gray-800 to-gray-900 text-gray-200 min-h-screen">
+    <header class="bg-gray-900 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
+            <div>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300" onclick="location.href='{{ url_for('dashboard') }}'">Dashboard</button>
+                <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-300 ml-2" onclick="location.href='{{ url_for('get_timetable') }}'">Timetable</button>
+            </div>
+        </div>
+    </header>
+    <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8">
+        <h1 class="text-4xl font-bold mb-4 text-center text-white">Grades</h1>
+        <div class="flex justify-center mb-4">
+            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 mr-2" onclick="switchTerm(1)">First Term</button>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300" onclick="switchTerm(2)">Second Term</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-gray-700 rounded-lg">
+                <thead>
+                    <tr>
+                        <th class="py-2 px-4 bg-gray-600 text-gray-200">Subject</th>
+                        <th class="py-2 px-4 bg-gray-600 text-gray-200">Grade</th>
                     </tr>
-                {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
+                </thead>
+                <tbody>
+                    {% for subject, subject_grades in grades.items() %}
+                        <tr class="border-b border-gray-600">
+                            <td class="py-2 px-4 text-gray-200">{{ subject }}</td>
+                            {% for grade in subject_grades %}
+                                <td class="py-2 px-4 text-gray-200">
+                                    {% if grade.percent is not none %}
+                                        {{ grade.percent }}%
+                                    {% elif grade.max_points is not none %}
+                                        {{ grade.grade_n }} / {{ grade.max_points }}
+                                    {% else %}
+                                        {{ grade.grade_n }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% for grade in subject_grades %}
+                            <tr class="grade-info">
+                                <td colspan="{{ subject_grades|length + 1 }}" class="py-2 px-4 text-gray-200">
+                                    <strong>Title:</strong> {{ grade.title }}<br>
+                                    <strong>Date:</strong> {{ grade.date }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </body>
 </html>

@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from edupage_api import Edupage
+from edupage_api.people import EduAccount  # Import the EduAccount class
+from edupage_api.messages import Messages  # Import the Messages class
 from edupage_api.substitution import Substitution, TimetableChange
 from edupage_api.grades import Grades, EduGrade
 from edupage_api.lunches import Lunches  # Import the Lunches class
@@ -40,6 +42,9 @@ def login():
     password = request.form['password']
     subdomain = request.form['subdomain']
 
+    # Format the username from NameSurname to Name Surname
+    formatted_username = ' '.join([username[:username.find('S')], username[username.find('S'):]])
+
     edupage = Edupage()
     try:
         # Attempt to log in
@@ -48,20 +53,20 @@ def login():
         if two_factor_login:
             # Handle 2FA if needed
             session['subdomain'] = subdomain
-            session['username'] = username
+            session['username'] = formatted_username
             session['password'] = password  # Store password in session
             session['session_id'] = edupage.session.cookies.get('PHPSESSID')
             return redirect(url_for('two_factor'))
         else:
             # Login successful, no 2FA needed
             session['subdomain'] = subdomain
-            session['username'] = username
+            session['username'] = formatted_username
             session['password'] = password  # Store password in session
             session['session_id'] = edupage.session.cookies.get('PHPSESSID')
             return redirect(url_for('dashboard'))
     except Exception as e:
         return render_template('login.html', error=str(e))
-
+    
 @app.route('/two_factor', methods=['GET', 'POST'])
 def two_factor():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
@@ -99,7 +104,7 @@ def dashboard():
 
     # Fetch student data from Edupage API
     students = edupage.get_students()  # Replace this with the actual method to fetch student data
-    student_data = next((student for student in students if student.name == 'Jakub Schalek'), None)
+    student_data = next((student for student in students if student.name == session['username']), None)
     
     if student_data is None:
         return redirect(url_for('index'))
@@ -149,13 +154,17 @@ def timetable_changes():
 
     # Fetch timetable changes for a specific date
     substitution = Substitution(edupage)
-    specific_date = date(2025, 3, 3)
+    specific_date = date.today()
     changes = substitution.get_timetable_changes(specific_date)
 
     if changes is None:
         changes = []
 
-    return render_template('timetable_changes.html', changes=changes)
+    changes = [change for change in changes if change.change_class == '2.A']
+
+    today_date = specific_date.strftime("%A, %B %d, %Y")
+
+    return render_template('timetable_changes.html', changes=changes, today_date=today_date)
 
 @app.route('/grades', methods=['GET'])
 def grades():
@@ -170,9 +179,8 @@ def grades():
     # Get the term from the query parameter
     term = request.args.get('term', default=2, type=int)
 
-    # Fetch grades for the logged-in student
-    grades_module = Grades(edupage)
-    grades_list = grades_module.get_grades(term=term, year=None)
+    # Fetch grades for the logged-in student for the specified term
+    grades_list = edupage.get_grades_for_term(year=None, term=term)
 
     if grades_list is None:
         grades_list = []
@@ -224,7 +232,7 @@ def get_timetable():
     students = edupage.get_students()
     if not students:
         return redirect(url_for('index'))
-    student_data = next((student for student in students if student.name == 'Jakub Schalek'), None)
+    student_data = next((student for student in students if student.name == session['username']), None)
     if student_data is None:
         return redirect(url_for('index'))
     EduStudent = student_data
@@ -235,6 +243,7 @@ def get_timetable():
     
 
     return render_template('timetable.html', timetable=timetable, current_date=specific_date, teachers=teachers)
+
 
 EVENT_TYPE_MAP = {
     "album": "Album",

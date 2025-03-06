@@ -1,147 +1,48 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
     <title>Schalek - Presentations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Schalek - Presentations">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='font-awesome.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
-    <script src="https://kit.fontawesome.com/f83e61cd6c.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body data-aos-easing="ease" data-aos-duration="600" data-aos-delay="0">
-<header id="header" style="border-bottom: 0;color:#fff;transition: all 0.3s;">
-  <div class="nav">
-      <a href="" style="text-decoration:none" id="Logo">
-          <h3 style="margin: 0;margin-left: 10px;color: #FFF;">SchalekPage</h3>
-      </a>
-  </div>
-</header>
-<section id="secondSection2" style="margin-top: 100px;">
-  <div id="svg-container" style="margin-bottom: 175px;">
-  <h2 style="text-align: center;color: #EEEEEE; padding: 5px;border-radius: 25px; font-size: 45px; margin-top: -20px;">Login</h2>
-  </div>
-<div class="wrapp1">
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    <form method="POST" action="{{ url_for('login') }}" class="form-support">
-        <div class="form-group">
-            <label for="username" style="color: #EEEEEE">Username:</label>
-            <input type="text" id="username" name="username" required><br>
-        </div>
-        <div class="form-group">
-            <label for="password" style="color: #EEEEEE; margin-top: 5px;">Password:</label>
-            <input type="password" id="password" name="password" required><br>
-        </div>
-        <div class="form-group">
-            <label for="subdomain" style="color: #EEEEEE; margin-top: 5px;">Subdomain Školy:</label>
-            <input type="text" id="subdomain" name="subdomain" required><br>
-        </div>
-        <div>
-            <input class="lbutton" style="width: 100%;" type="submit" id="cbtnl" name="submit" value="Login" required>
-        </div>
-    </form>
-</div>
-</section>
-<style>
-.lbutton {
-  text-decoration: none;
-  padding: 0.625rem 1.875rem 0.625rem 1.875rem;
-  font-size: 1rem;
-  border-radius: 25px;
-  -webkit-transition: all .3s;
-  -o-transition: all .3s;
-  transition: all .3s;
-  border: none;
-  margin-top: 1rem;
-  cursor: pointer;
-  font-weight: 600;
-}
-  .form-support {
-  width: 100%;
-  max-width: 530px;
-  padding: 15px;
-  margin: 0 auto;
-  }
-  .form-support .checkbox {
-  font-weight: 400;
-  }
-  .form-support .form-control {
-  position: relative;
-  box-sizing: border-box;
-  height: auto;
-  padding: 10px;
-  font-size: 16px;
-  }
-  .form-support .form-control:focus {
-  z-index: 2;
-  }
-  .form-support input[type="email"] {
-  margin-bottom: -1px;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-  }
-  form-support input[type="password"] {
-  margin-bottom: 10px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  }
-  .column {
-  float: none;
-  display: inline-flex;
-  width: 100%;
-  height: 100%;
-  margin-bottom: 16px;
-  padding: 0 8px;
-  border-radius: 15px;
-  margin: 40px;
-  justify-content: center;
-  }
-  .row{
-      border-radius: 15px;
-      background-color: #C8AE7D;
-      justify-content: center;
-      margin: 20px;
-      display: inline-block;
-      display: flex;
-  }
-  .meno {
-      display: flex;
-  }
-</style>
-<footer id="basicFooter" style="margin-top:20%">
-    <div style="display:flex;width:100%;justify-content:center">
-        <div style="display:flex;width:100%;justify-content:space-between;padding:15px;border-top:2px solid #d5dae2;max-width:1400px">
-            <h4>Schalek  © 2025</h4>
-        </div>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<header class="bg-gray-800 w-full py-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
     </div>
+</header>
+<main class="flex-grow flex flex-col justify-center items-center">
+    <section class="w-full max-w-md mt-8">
+        <div class="bg-gray-800 rounded-lg shadow-lg p-8">
+            <h2 class="text-4xl font-bold mb-4 text-center text-white">Login</h2>
+            {% if error %}
+                <p class="text-red-500">{{ error }}</p>
+            {% endif %}
+            <form method="POST" action="{{ url_for('login') }}" class="space-y-4">
+                <div class="form-group">
+                    <label for="username" class="block text-gray-300">Username:</label>
+                    <input type="text" id="username" name="username" class="w-full px-3 py-2 bg-gray-700 text-white rounded" required>
+                </div>
+                <div class="form-group">
+                    <label for="password" class="block text-gray-300">Password:</label>
+                    <input type="password" id="password" name="password" class="w-full px-3 py-2 bg-gray-700 text-white rounded" required>
+                </div>
+                <div class="form-group">
+                    <label for="subdomain" class="block text-gray-300">Subdomain Školy:</label>
+                    <input type="text" id="subdomain" name="subdomain" class="w-full px-3 py-2 bg-gray-700 text-white rounded" required>
+                </div>
+                <div>
+                    <input type="submit" class="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300 cursor-pointer" value="Login">
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+<footer class="w-full py-4 bg-gray-800 text-center text-gray-400">
+    <p>Schalek © 2025</p>
 </footer>
-<script>
-  $('.footerMobileExpand').hide();
-  $(document).ready(function(){
-      $('.footerMobileWrapper').click(function(){
-          $(this).next().slideToggle(100);
-          $(this).find('i').toggleClass('rotated');
-          if ($(this).find('i').hasClass('rotated')) {
-              $(this).find('i').css('transform', 'rotate(45deg)');
-          } else {
-              $(this).find('i').css('transform', 'rotate(0deg)');
-          }
-      })
-  });
-    function myFunction() {
-    var x = document.getElementById("myLinks");
-    if (x.style.display === "block") {
-      x.style.display = "none";
-    } else {
-      x.style.display = "block";
-    }
-  }
-</script>
 </body>
 </html>
