@@ -51,17 +51,25 @@
     <header class="bg-gray-900 p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
-            <div>
-                <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300" onclick="location.href='{{ url_for('dashboard') }}'">Dashboard</button>
-                <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-300 ml-2" onclick="location.href='{{ url_for('get_timetable') }}'">Timetable</button>
+            <div class="flex space-x-2">
+                <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('dashboard') }}'">
+                     Dashboard
+                </button>
+                <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable') }}'">
+                     Timetable
+                </button>
             </div>
         </div>
     </header>
     <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8">
         <h1 class="text-4xl font-bold mb-4 text-center text-white">Grades</h1>
-        <div class="flex justify-center mb-4">
-            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 mr-2" onclick="switchTerm(1)">First Term</button>
-            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300" onclick="switchTerm(2)">Second Term</button>
+        <div class="flex justify-center mb-4 space-x-2">
+            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="switchTerm(1)">
+                 First Term
+            </button>
+            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="switchTerm(2)">
+               Second Term
+            </button>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full bg-gray-700 rounded-lg">

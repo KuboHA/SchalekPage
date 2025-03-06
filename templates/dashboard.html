@@ -31,6 +31,10 @@
         .notification-text a:hover {
             color: #3b82f6; /* Tailwind blue-500 */
         }
+        .main-div {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+        }
     </style>
     <script>
         function toggleText(id) {
@@ -56,7 +60,7 @@
             <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
         </div>
     </header>
-    <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8">
+    <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8 main-div">
         <h1 class="text-4xl font-bold mb-4 text-center text-white">Dashboard</h1>
         <p class="text-lg mb-6 text-center text-gray-300">Welcome, {{ student.name }}!</p>
         <div class="flex justify-center space-x-8 mb-6">
@@ -87,7 +91,7 @@
                                 <i class="fas {{ event_type_icons[notification.event_type.value.lower()] }} text-2xl text-white mr-4"></i>
                             {% endif %}
                                 <div>
-                                    <p class="text-sm text-gray-400">{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                                    <p class="text-sm text-gray-400">{{ notification.formatted_timestamp }}</p>
                                     <p class="text-lg text-white notification-text">
                                         {% if notification.text|length > 200 %}
                                             {{ notification.text[:200] | safe }}<span id="dots-{{ loop.index }}">...</span><span id="more-{{ loop.index }}" style="display:none">{{ notification.text[200:] | safe }}</span>

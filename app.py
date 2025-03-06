@@ -23,16 +23,18 @@ class EduStudent:
         self.class_id = class_id
         self.number_in_class = number_in_class
 
-def fetch_teacher_data_by_name(edupage: Edupage, teacher_name: str) -> Optional[dict]:
-    # Assuming there is a method called `get_teachers` that returns a list of teachers
-    teachers = edupage.get_teachers()
+def time_since_posted(timestamp):
+    now = datetime.now()
+    diff = now - timestamp
 
-    for teacher in teachers:
-        if edupage.get_full_name(teacher) in teacher_name:
-            teacher_data = teacher
-            teacher_data["id"] = teacher.get('id')  # Assuming each teacher has an 'id' attribute
-            return teacher_data
-    return None
+    if diff.days > 0:
+        return f"{diff.days} days ago"
+    elif diff.seconds // 3600 > 0:
+        return f"{diff.seconds // 3600} hours ago"
+    elif diff.seconds // 60 > 0:
+        return f"{diff.seconds // 60} minutes ago"
+    else:
+        return "Just now"
 
 @app.route('/')
 def index():
@@ -123,31 +125,12 @@ def dashboard():
     # Fetch notifications
     notifications = edupage.get_notifications()
 
-    # Fetch next ringing time
-    ringing_times = RingingTimes(edupage)
-    next_ringing_time = ringing_times.get_next_ringing_time(datetime.now())
+    # Format the timestamps
+    for notification in notifications:
+        notification.formatted_timestamp = time_since_posted(notification.timestamp)
 
-    return render_template('dashboard.html', student=student, notifications=notifications, next_ringing_time=next_ringing_time, event_type_map=EVENT_TYPE_MAP, event_type_icons=EVENT_TYPE_ICONS)
-
-@app.route('/search_teacher')
-def search_teacher():
-    if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
-        return redirect(url_for('index'))
-
-    teacher_name = request.args.get('name')
-    if teacher_name:
-        # Recreate the Edupage object
-        edupage = Edupage()
-        edupage.login(session['username'], session['password'], session['subdomain'])
-        edupage.session.cookies.set('PHPSESSID', session['session_id'])
-
-        teacher_data = fetch_teacher_data_by_name(edupage, teacher_name)
-        if teacher_data:
-            return f"Teacher found: {teacher_data['first_name']} {teacher_data['last_name']}"
-        else:
-            return "Teacher not found"
-    return redirect(url_for('dashboard'))
-
+    return render_template('dashboard.html', student=student, notifications=notifications, event_type_map=EVENT_TYPE_MAP, event_type_icons=EVENT_TYPE_ICONS)
+    
 @app.route('/timetable_changes', methods=['GET'])
 def timetable_changes():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
