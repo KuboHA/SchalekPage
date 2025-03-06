@@ -17,6 +17,20 @@
             color: #ffffff;
             border-color: #ffffff;
         }
+        .link {
+            color: #60a5fa; /* Tailwind blue-400 */
+            text-decoration: underline;
+        }
+        .link:hover {
+            color: #3b82f6; /* Tailwind blue-500 */
+        }
+        .notification-text a {
+            color: #60a5fa; /* Tailwind blue-400 */
+            text-decoration: underline;
+        }
+        .notification-text a:hover {
+            color: #3b82f6; /* Tailwind blue-500 */
+        }
     </style>
 </head>
 <body class="bg-gray-800 text-gray-200 min-h-screen">
@@ -57,7 +71,7 @@
                             {% endif %}
                                 <div>
                                     <p class="text-sm text-gray-400">{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                                    <p class="text-lg text-white">{{ notification.text | safe }}</p>
+                                    <p class="text-lg text-white notification-text">{{ notification.text | urlize | safe }}</p>
                                     <p class="text-sm text-gray-400">Author: {{ notification.author }}</p>
                                     <p class="text-sm text-gray-400">Recipient: {{ notification.recipient }}</p>
                                 </div>
