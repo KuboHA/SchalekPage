@@ -101,36 +101,40 @@ def dashboard():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
         return redirect(url_for('index'))
 
-    # Recreate the Edupage object
     edupage = Edupage()
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-    # Fetch student data from Edupage API
-    students = edupage.get_students()  # Replace this with the actual method to fetch student data
+    # Get student data
+    students = edupage.get_students()
     student_data = next((student for student in students if student.name == session['username']), None)
     
-    if student_data is None:
-        return redirect(url_for('index'))
-
-    student = EduStudent(
-        person_id=student_data.person_id,
-        name=student_data.name,
-        gender=student_data.gender,
-        in_school_since=student_data.in_school_since,
-        class_id=student_data.class_id,
-        number_in_class=student_data.number_in_class
-    )
-
-    # Fetch notifications
+    # Get notifications
     notifications = edupage.get_notifications()
-
-    # Format the timestamps
-    for notification in notifications:
-        notification.formatted_timestamp = time_since_posted(notification.timestamp)
-
-    return render_template('dashboard.html', student=student, notifications=notifications, event_type_map=EVENT_TYPE_MAP, event_type_icons=EVENT_TYPE_ICONS)
     
+    # Get today's timetable
+    today = date.today()
+    timetable = edupage.get_my_timetable(today)
+    
+    # Get today's meals and convert to list
+    meals_data = edupage.get_meals(today)
+    meals_list = []
+    if meals_data:
+        if meals_data.snack:
+            meals_list.append(meals_data.snack)
+        if meals_data.lunch:
+            meals_list.append(meals_data.lunch)
+        if meals_data.afternoon_snack:
+            meals_list.append(meals_data.afternoon_snack)
+
+    return render_template('dashboard.html', 
+                         student=student_data,
+                         notifications=notifications,
+                         timetable=timetable,
+                         meals=meals_list,
+                        event_type_map=EVENT_TYPE_MAP,
+                         event_type_icons=EVENT_TYPE_ICONS)
+
 @app.route('/timetable_changes', methods=['GET'])
 def timetable_changes():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
@@ -151,59 +155,67 @@ def timetable_changes():
 
     changes = [change for change in changes if change.change_class == '2.A']
 
-    today_date = specific_date.strftime("%A, %B %d, %Y")
+    return render_template('timetable.html', changes=changes, current_date=specific_date)
 
-    return render_template('timetable_changes.html', changes=changes, today_date=today_date)
 
-@app.route('/grades', methods=['GET'])
+@app.route('/lunches/', defaults={'date_str': None})
+@app.route('/lunches/<date_str>')
+def lunches(date_str):
+    if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
+        return redirect(url_for('index'))
+
+    edupage = Edupage()
+    edupage.login(session['username'], session['password'], session['subdomain'])
+    edupage.session.cookies.set('PHPSESSID', session['session_id'])
+
+    try:
+        if date_str:
+            specific_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            specific_date = date.today()
+    except ValueError:
+        specific_date = date.today()
+
+    # Calculate previous and next dates
+    prev_date = specific_date - timedelta(days=1)
+    next_date = specific_date + timedelta(days=1)
+
+    meals_data = edupage.get_meals(specific_date)
+    
+    if meals_data is None:
+        meals_list = []
+    else:
+        meals_list = []
+        if meals_data.snack:
+            meals_list.append(meals_data.snack)
+        if meals_data.lunch:
+            meals_list.append(meals_data.lunch)
+        if meals_data.afternoon_snack:
+            meals_list.append(meals_data.afternoon_snack)
+
+    return render_template('lunches.html', 
+                         meals=meals_list, 
+                         current_date=specific_date,
+                         prev_date=prev_date,
+                         next_date=next_date)
+
+@app.route('/grades')
 def grades():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
         return redirect(url_for('index'))
 
-    # Recreate the Edupage object
     edupage = Edupage()
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-    # Get the term from the query parameter
-    term = request.args.get('term', default=2, type=int)
+    # Get all grades for the current school year
+    grades_data = edupage.get_grades()
+    
+    # Sort grades by date, newest first
+    if grades_data:
+        grades_data.sort(key=lambda x: x.date, reverse=True)
 
-    # Fetch grades for the logged-in student for the specified term
-    grades_list = edupage.get_grades_for_term(year=None, term=term)
-
-    if grades_list is None:
-        grades_list = []
-
-    # Group grades by subject
-    grades = defaultdict(list)
-    for grade in grades_list:
-        grades[grade.subject_name].append(grade)
-
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify(grades=grades)
-
-    return render_template('grades.html', grades=grades)
-
-@app.route('/lunches', methods=['GET'])
-def lunches():
-    if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
-        return redirect(url_for('index'))
-
-    edupage = Edupage()
-    edupage.login(session['username'], session['password'], session['subdomain'])
-    edupage.session.cookies.set('PHPSESSID', session['session_id'])
-
-    lunches_module = Lunches(edupage)
-    specific_date = date(2025, 3, 3)
-    lunches = lunches_module.get_meals(specific_date)
-
-    # Extract the meals list properly
-    if hasattr(lunches, 'meals'):
-        lunches = lunches.meals  # Extract meals if it's a structured object
-    else:
-        lunches = []
-
-    return render_template('lunches.html', lunches=lunches)
+    return render_template('grades.html', grades=grades_data)
 
 @app.route('/timetable', methods=['GET'])
 def get_timetable():
@@ -217,22 +229,18 @@ def get_timetable():
 
     # Fetch timetable for the logged-in student
     specific_date = date.today()
-    teachers = edupage.get_teachers()
     students = edupage.get_students()
-    if not students:
-        return redirect(url_for('index'))
     student_data = next((student for student in students if student.name == session['username']), None)
+    
     if student_data is None:
         return redirect(url_for('index'))
-    EduStudent = student_data
-    timetable = edupage.get_timetable(EduStudent, specific_date)
+
+    timetable = edupage.get_my_timetable(specific_date)
 
     if timetable is None:
         timetable = []
-    
 
-    return render_template('timetable.html', timetable=timetable, current_date=specific_date, teachers=teachers)
-
+    return render_template('timetable.html', timetable=timetable, current_date=specific_date)
 
 EVENT_TYPE_MAP = {
     "album": "Album",

@@ -2,110 +2,129 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Grades</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .grade-info {
-            display: none;
-        }
-        tr:hover .grade-info {
-            display: table-row;
-        }
-    </style>
-    <script>
-        function switchTerm(term) {
-            fetch(`/grades?term=${term}`)
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.querySelector('tbody');
-                    tbody.innerHTML = '';
-                    for (const [subject, subject_grades] of Object.entries(data.grades)) {
-                        let row = `<tr><td class="py-2 px-4 text-gray-200">${subject}</td>`;
-                        for (const grade of subject_grades) {
-                            if (grade.percent !== null) {
-                                row += `<td class="py-2 px-4 text-gray-200">${grade.percent}%</td>`;
-                            } else if (grade.max_points !== null) {
-                                row += `<td class="py-2 px-4 text-gray-200">${grade.grade_n} / ${grade.max_points}</td>`;
-                            } else {
-                                row += `<td class="py-2 px-4 text-gray-200">${grade.grade_n}</td>`;
-                            }
-                        }
-                        row += '</tr>';
-                        tbody.innerHTML += row;
-                        for (const grade of subject_grades) {
-                            tbody.innerHTML += `
-                                <tr class="grade-info">
-                                    <td colspan="${subject_grades.length + 1}" class="py-2 px-4 text-gray-200">
-                                        <strong>Title:</strong> ${grade.title}<br>
-                                        <strong>Date:</strong> ${grade.date}
-                                    </td>
-                                </tr>
-                            `;
-                        }
-                    }
-                });
-        }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grades - SchalekPage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-<body class="bg-gradient-to-r from-gray-800 to-gray-900 text-gray-200 min-h-screen">
+<body class="bg-gray-800 text-gray-200 min-h-screen">
     <header class="bg-gray-900 p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
-            <div class="flex space-x-2">
-                <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('dashboard') }}'">
-                     Dashboard
-                </button>
-                <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable') }}'">
-                     Timetable
-                </button>
-            </div>
+            <h1 class="text-3xl font-bold text-white">Grades</h1>
+            <button 
+                onclick="location.href='{{ url_for('dashboard') }}'"
+                class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 hover:bg-indigo-600 transition-all duration-300 group"
+            >
+                <i class="fas fa-home text-gray-400 group-hover:text-white transition-colors duration-300"></i>
+            </button>
         </div>
     </header>
-    <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8">
-        <h1 class="text-4xl font-bold mb-4 text-center text-white">Grades</h1>
-        <div class="flex justify-center mb-4 space-x-2">
-            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="switchTerm(1)">
-                 First Term
-            </button>
-            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="switchTerm(2)">
-               Second Term
-            </button>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-gray-700 rounded-lg">
-                <thead>
-                    <tr>
-                        <th class="py-2 px-4 bg-gray-600 text-gray-200">Subject</th>
-                        <th class="py-2 px-4 bg-gray-600 text-gray-200">Grade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for subject, subject_grades in grades.items() %}
-                        <tr class="border-b border-gray-600">
-                            <td class="py-2 px-4 text-gray-200">{{ subject }}</td>
-                            {% for grade in subject_grades %}
-                                <td class="py-2 px-4 text-gray-200">
-                                    {% if grade.percent is not none %}
-                                        {{ grade.percent }}%
-                                    {% elif grade.max_points is not none %}
-                                        {{ grade.grade_n }} / {{ grade.max_points }}
-                                    {% else %}
-                                        {{ grade.grade_n }}
+
+    <div class="container mx-auto px-4 py-6">
+        <div class="bg-gray-700 rounded-lg shadow-lg">
+            {% if grades %}
+                {% set total_avg = [] %}
+                <div class="divide-y divide-gray-600">
+                    {% for subject, subject_grades in grades|groupby('subject_name') %}
+                        {% set subject_total = namespace(sum=0, count=0, points_sum=0, max_points_sum=0) %}
+                        <div class="p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h2 class="text-lg font-bold text-white">{{ subject }}</h2>
+                                {% for grade in subject_grades %}
+                                    {% if grade.max_points %}
+                                        {% set subject_total.points_sum = subject_total.points_sum + (grade.grade_n|float) %}
+                                        {% set subject_total.max_points_sum = subject_total.max_points_sum + (grade.max_points|float) %}
+                                    {% elif grade.grade_n is not none and grade.grade_n|float <= 5 %}
+                                        {% set subject_total.sum = subject_total.sum + (grade.grade_n|float) %}
+                                        {% set subject_total.count = subject_total.count + 1 %}
                                     {% endif %}
-                                </td>
-                            {% endfor %}
-                        </tr>
-                        {% for grade in subject_grades %}
-                            <tr class="grade-info">
-                                <td colspan="{{ subject_grades|length + 1 }}" class="py-2 px-4 text-gray-200">
-                                    <strong>Title:</strong> {{ grade.title }}<br>
-                                    <strong>Date:</strong> {{ grade.date }}
-                                </td>
-                            </tr>
-                        {% endfor %}
+                                {% endfor %}
+
+                                {% if subject_total.count > 0 or subject_total.max_points_sum > 0 %}
+                                    {% set grade_avg = 0 %}
+                                    {% if subject_total.count > 0 %}
+                                        {% set grade_avg = subject_total.sum / subject_total.count %}
+                                    {% endif %}
+                                    
+                                    {% if subject_total.max_points_sum > 0 %}
+                                        {% set percent = (subject_total.points_sum / subject_total.max_points_sum * 100)|round(2) %}
+                                        {% set points_grade = 5.0 %}
+                                        {% if percent >= 90 %}{% set points_grade = 1.0 %}
+                                        {% elif percent >= 75 %}{% set points_grade = 2.0 %}
+                                        {% elif percent >= 50 %}{% set points_grade = 3.0 %}
+                                        {% elif percent >= 35 %}{% set points_grade = 4.0 %}
+                                        {% endif %}
+                                        
+                                        {% if subject_total.count > 0 %}
+                                            {% set grade_avg = (grade_avg|float + points_grade) / 2 %}
+                                        {% else %}
+                                            {% set grade_avg = points_grade %}
+                                        {% endif %}
+                                    {% endif %}
+
+                                    {% set avg = grade_avg|round(2) %}
+                                    {% set _ = total_avg.append(avg|float) %}
+                                    <div class="flex items-center gap-3">
+                                        {% if subject_total.max_points_sum > 0 %}
+                                            <span class="text-sm text-gray-400">({{ percent }}%)</span>
+                                        {% endif %}
+                                        <span class="px-3 py-1 rounded-full text-sm font-bold
+                                            {% if avg >= 4 %}bg-red-400/10 text-red-400
+                                            {% elif avg >= 3 %}bg-yellow-400/10 text-yellow-400
+                                            {% elif avg >= 2 %}bg-blue-400/10 text-blue-400
+                                            {% else %}bg-green-400/10 text-green-400{% endif %}">
+                                            Final: {{ avg|int }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="space-y-2">
+                                {% for grade in subject_grades %}
+                                    <div class="bg-gray-800 rounded-lg p-3 flex items-start justify-between hover:bg-gray-750 transition-colors">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-lg font-bold px-2.5 py-0.5 rounded-full
+                                                    {% if grade.max_points %}
+                                                        {% if grade.percent >= 90 %}bg-green-400/10 text-green-400
+                                                        {% elif grade.percent >= 75 %}bg-blue-400/10 text-blue-400
+                                                        {% elif grade.percent >= 50 %}bg-yellow-400/10 text-yellow-400
+                                                        {% else %}bg-red-400/10 text-red-400{% endif %}
+                                                    {% else %}
+                                                        {% if grade.grade_n == 5 %}bg-red-400/10 text-red-400
+                                                        {% elif grade.grade_n == 4 %}bg-yellow-400/10 text-yellow-400
+                                                        {% elif grade.grade_n == 3 %}bg-yellow-400/10 text-yellow-300
+                                                        {% elif grade.grade_n == 2 %}bg-green-400/10 text-green-400
+                                                        {% elif grade.grade_n == 1 %}bg-green-400/10 text-green-300
+                                                        {% else %}bg-gray-600 text-gray-300{% endif %}
+                                                    {% endif %}">
+                                                    {% if grade.max_points %}
+                                                        {{ grade.percent }}%
+                                                    {% else %}
+                                                        {{ grade.grade_n|int }}
+                                                    {% endif %}
+                                                </span>
+                                                <span class="text-sm text-gray-300">{{ grade.title }}</span>
+                                            </div>
+                                            {% if grade.comment %}
+                                                <p class="text-sm text-gray-400 mt-1.5">{{ grade.comment }}</p>
+                                            {% endif %}
+                                            {% if grade.max_points %}
+                                                <p class="text-xs text-gray-500 mt-1">{{ grade.grade_n }}/{{ grade.max_points }} points</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-right text-xs text-gray-400">
+                                            <p>{{ grade.date.strftime('%Y-%m-%d') }}</p>
+                                            {% if grade.teacher %}
+                                                <p class="mt-1">{{ grade.teacher.name }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+            {% endif %}
         </div>
     </div>
 </body>

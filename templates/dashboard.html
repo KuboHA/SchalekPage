@@ -5,7 +5,7 @@
     <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -60,54 +60,138 @@
             <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
         </div>
     </header>
-    <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8 main-div">
-        <h1 class="text-4xl font-bold mb-4 text-center text-white">Dashboard</h1>
-        <p class="text-lg mb-6 text-center text-gray-300">Welcome, {{ student.name }}!</p>
-        <div class="flex justify-center space-x-8 mb-6">
-            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('timetable_changes') }}'">
-                <i class="fas fa-calendar-alt text-2xl mr-2"></i> Substitutions
-            </button>
-            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('grades') }}'">
-                <i class="fas fa-graduation-cap text-2xl mr-2"></i> Grades
-            </button>
-            <button class="btn text-white border border-gray-500 px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable') }}'">
-                <i class="fas fa-clock text-2xl mr-2"></i> Timetable
-            </button>
+
+    <div class="mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
+        <!-- Left Sidebar - Lunch Menu -->
+        <div class="w-full lg:w-1/4">
+            <div class="bg-gray-700 rounded-lg p-4 shadow-lg lg:sticky lg:top-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-white">Today's Lunch</h2>
+                    <a href="{{ url_for('lunches') }}" class="text-sm text-blue-400 hover:text-blue-300">View All</a>
+                </div>
+                {% if meals %}
+                    <ul class="space-y-2">
+                        {% for meal in meals %}
+                            {% for menu in meal.menus %}
+                                <li class="bg-gray-800 rounded p-2">
+                                    {% if menu.number %}
+                                        <span class="text-xs rounded-full">
+                                            Menu {{ menu.number }}
+                                        </span>
+                                    {% endif %}
+                                    <p class="text-sm mt-1 text-gray-300">{{ menu.name }}</p>
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-400 text-sm">No meals available today</p>
+                {% endif %}
+            </div>
         </div>
-        <div class="bg-gray-700 rounded-lg p-4">
-            <h2 class="text-2xl font-bold mb-4 text-center text-white">Notifications</h2>
-            <ul>
-                {% for notification in notifications %}
-                    {% if notification.event_type and notification.event_type.value and notification.event_type.value not in ['h_clearcache', 'h_cleardbi', 'h_clearisicdata', 'h_dailyplan', 'h_znamky', 'confirmation', 'h_contest', 'h_hideplans', 'h_clearplany'] %}
-                        <li class="mb-2">
-                            <div class="bg-gray-800 p-4 rounded-lg shadow-md flex items-center">
-                                {% if notification.event_type.value == 'pipnutie' %}
-                                {% if notification.additional_data.typ == 1 %}
-                                    <i class="fas fa-sign-in-alt text-green-400 text-2xl mr-4"></i>
-                                {% elif notification.additional_data.typ == 2 %}
-                                    <i class="fas fa-sign-out-alt text-red-400 text-2xl mr-4"></i>
-                                {% endif %}
-                                {% else %}
-                                <i class="fas {{ event_type_icons[notification.event_type.value.lower()] }} text-2xl text-white mr-4"></i>
-                            {% endif %}
-                                <div>
-                                    <p class="text-sm text-gray-400">{{ notification.formatted_timestamp }}</p>
-                                    <p class="text-lg text-white notification-text">
-                                        {% if notification.text|length > 200 %}
-                                            {{ notification.text[:200] | safe }}<span id="dots-{{ loop.index }}">...</span><span id="more-{{ loop.index }}" style="display:none">{{ notification.text[200:] | safe }}</span>
-                                            <button onclick="toggleText({{ loop.index }})" id="btn-{{ loop.index }}" class="link">Show more</button>
+
+        <!-- Main Content -->
+        <div class="w-full lg:w-2/4">
+            <div class="bg-gray-800 rounded-lg p-4 lg:p-8 shadow-lg">
+                <h1 class="text-3xl lg:text-4xl font-bold mb-4 text-center text-white">Dashboard</h1>
+                <p class="text-base lg:text-lg mb-6 text-center text-gray-300">Welcome, {{ student.name }}!</p>
+                <div class="flex flex-wrap justify-center gap-4 lg:gap-8 mb-6">
+                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('timetable_changes') }}'">
+                        <i class="fas fa-calendar-alt text-xl lg:text-2xl mr-2"></i> 
+                        <span class="text-sm lg:text-base">Substitutions</span>
+                    </button>
+                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('grades') }}'">
+                        <i class="fas fa-graduation-cap text-xl lg:text-2xl mr-2"></i> 
+                        <span class="text-sm lg:text-base">Grades</span>
+                    </button>
+                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('lunches') }}'">
+                        <i class="fas fa-utensils text-xl lg:text-2xl mr-2"></i> 
+                        <span class="text-sm lg:text-base">Lunches</span>
+                    </button>
+                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable') }}'">
+                        <i class="fas fa-clock text-xl lg:text-2xl mr-2"></i> 
+                        <span class="text-sm lg:text-base">Timetable</span>
+                    </button>
+                </div>
+                
+                <!-- Notifications -->
+                <div class="bg-gray-700 rounded-lg p-4 lg:p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center text-white">Notifications</h2>
+                    <ul>
+                        {% for notification in notifications %}
+                            {% if notification.event_type and notification.event_type.value and notification.event_type.value not in ['h_clearcache', 'h_cleardbi', 'h_clearisicdata', 'h_dailyplan', 'h_znamky', 'confirmation', 'h_contest', 'h_hideplans', 'h_clearplany'] %}
+                                <li class="mb-2">
+                                    <div class="bg-gray-800 p-4 rounded-lg shadow-md flex items-center">
+                                        {% if notification.event_type.value == 'pipnutie' %}
+                                            {% if notification.additional_data.typ == 1 %}
+                                                <i class="fa-solid fa-right-to-bracket text-green-400 text-2xl mr-4"></i>
+                                            {% elif notification.additional_data.typ == 2 %}
+                                                <i class="fa-solid fa-right-from-bracket text-red-400 text-2xl mr-4"></i>
+                                            {% endif %}
                                         {% else %}
-                                            {{ notification.text | urlize | safe }}
+                                            <i class="fa-solid {{ event_type_icons[notification.event_type.value.lower()] }} text-2xl text-white mr-4"></i>
                                         {% endif %}
-                                    </p>
-                                    <p class="text-sm text-gray-400">Author: {{ notification.author }}</p>
-                                    <p class="text-sm text-gray-400">Recipient: {{ notification.recipient }}</p>
+                                        <div>
+                                            <p class="text-sm text-gray-400">{{ notification.formatted_timestamp }}</p>
+                                            <p class="text-lg text-white notification-text">
+                                                {% if notification.text|length > 200 %}
+                                                    {{ notification.text[:200] | safe }}<span id="dots-{{ loop.index }}">...</span><span id="more-{{ loop.index }}" style="display:none">{{ notification.text[200:] | safe }}</span>
+                                                    <button onclick="toggleText({{ loop.index }})" id="btn-{{ loop.index }}" class="link">Show more</button>
+                                                {% else %}
+                                                    {{ notification.text | urlize | safe }}
+                                                {% endif %}
+                                            </p>
+                                            <p class="text-sm text-gray-400">Author: {{ notification.author }}</p>
+                                            <p class="text-sm text-gray-400">Recipient: {{ notification.recipient }}</p>
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Timetable -->
+        <div class="w-full lg:w-1/4">
+            <div class="bg-gray-700 rounded-lg p-4 shadow-lg lg:sticky lg:top-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-white">Today's Classes</h2>
+                    <a href="{{ url_for('get_timetable') }}" class="text-sm text-blue-400 hover:text-blue-300">View All</a>
+                </div>
+                {% if timetable %}
+                    <ul class="space-y-2">
+                        {% for class in timetable %}
+                            <li class="bg-gray-800 rounded p-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl font-bold text-indigo-300 min-w-[2rem] text-center">
+                                        {{ class.period }}
+                                    </span>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs px-2 py-0.5 bg-gray-700 rounded">
+                                                {{ class.classrooms | map(attribute='name') | join(', ') if class.classrooms else '' }}
+                                            </span>
+                                            <p class="text-sm text-gray-300">
+                                                {% if class.subject is string %}
+                                                    {% set subject_name = class.subject.split('name="')|last|split('"')|first if 'name="' in class.subject else class.subject %}
+                                                {% else %}
+                                                    {% set subject_name = class.subject.name if class.subject.name else class.subject %}
+                                                {% endif %}
+                                                {{ subject_name.title() }} - 
+                                                {{ class.teachers | map(attribute='name') | join(', ') if class.teachers else '' }}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-400 text-sm">No classes today</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 </body>
