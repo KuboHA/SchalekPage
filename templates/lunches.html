@@ -47,9 +47,9 @@
         </div>
         {% if meals %}
             {% for meal in meals %}
-                <ul class="space-y-4 mb-8">
+                <ul class="space-y-3 mb-4">
                     {% for menu in meal.menus %}
-                        <li class="bg-gray-700 rounded-lg p-6 flex justify-between items-center">
+                        <li class="bg-gray-700 rounded-lg p-4 flex justify-between items-center">
                             <div class="flex flex-col">
                                 <h3 class="text-lg font-bold text-white flex items-center gap-3">
                                     {% if menu.number %}
@@ -63,6 +63,7 @@
                         </li>
                     {% endfor %}
                 </ul>
+                <h3 class="font-bold text-indigo-300">Ordered meal: {{ meal.ordered_meal}}</h3>
             {% endfor %}
         {% else %}
             <div class="bg-gray-700 rounded-lg p-6 text-center text-gray-300 text-lg">

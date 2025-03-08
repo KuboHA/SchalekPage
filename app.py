@@ -135,8 +135,9 @@ def dashboard():
                         event_type_map=EVENT_TYPE_MAP,
                          event_type_icons=EVENT_TYPE_ICONS)
 
-@app.route('/timetable_changes', methods=['GET'])
-def timetable_changes():
+@app.route('/substitutions/', defaults={'date_str': None})
+@app.route('/substitutions/<date_str>')
+def get_timetable_changes(date_str):
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
         return redirect(url_for('index'))
 
@@ -144,10 +145,19 @@ def timetable_changes():
     edupage = Edupage()
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
+    
+    try:
+        if date_str:
+            specific_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            specific_date = date.today()
+    except ValueError:
+        specific_date = date.today()
 
-    # Fetch timetable changes for a specific date
+    prev_date = specific_date - timedelta(days=1)
+    next_date = specific_date + timedelta(days=1)
+
     substitution = Substitution(edupage)
-    specific_date = date.today()
     changes = substitution.get_timetable_changes(specific_date)
 
     if changes is None:
@@ -155,7 +165,7 @@ def timetable_changes():
 
     changes = [change for change in changes if change.change_class == '2.A']
 
-    return render_template('timetable.html', changes=changes, current_date=specific_date)
+    return render_template('substitutions.html', changes=changes, current_date=specific_date, prev_date=prev_date, next_date=next_date)
 
 
 @app.route('/lunches/', defaults={'date_str': None})
@@ -217,8 +227,9 @@ def grades():
 
     return render_template('grades.html', grades=grades_data)
 
-@app.route('/timetable', methods=['GET'])
-def get_timetable():
+@app.route('/timetable/', defaults={'date_str': None})
+@app.route('/timetable/<date_str>')
+def get_timetable(date_str):
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
         return redirect(url_for('index'))
 
@@ -228,7 +239,18 @@ def get_timetable():
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
     # Fetch timetable for the logged-in student
-    specific_date = date.today()
+    try:
+        if date_str:
+            specific_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            specific_date = date.today()
+    except ValueError:
+        specific_date = date.today()
+
+    # Calculate previous and next dates
+    prev_date = specific_date - timedelta(days=1)
+    next_date = specific_date + timedelta(days=1)
+
     students = edupage.get_students()
     student_data = next((student for student in students if student.name == session['username']), None)
     
@@ -240,7 +262,7 @@ def get_timetable():
     if timetable is None:
         timetable = []
 
-    return render_template('timetable.html', timetable=timetable, current_date=specific_date)
+    return render_template('timetable.html', timetable=timetable, current_date=specific_date, prev_date=prev_date, next_date=next_date)
 
 EVENT_TYPE_MAP = {
     "album": "Album",

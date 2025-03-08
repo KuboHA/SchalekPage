@@ -96,7 +96,7 @@
                 <h1 class="text-3xl lg:text-4xl font-bold mb-4 text-center text-white">Dashboard</h1>
                 <p class="text-base lg:text-lg mb-6 text-center text-gray-300">Welcome, {{ student.name }}!</p>
                 <div class="flex flex-wrap justify-center gap-4 lg:gap-8 mb-6">
-                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('timetable_changes') }}'">
+                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable_changes') }}'">
                         <i class="fas fa-calendar-alt text-xl lg:text-2xl mr-2"></i> 
                         <span class="text-sm lg:text-base">Substitutions</span>
                     </button>
