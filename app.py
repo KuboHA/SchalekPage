@@ -115,6 +115,10 @@ def dashboard():
     # Get today's timetable
     today = date.today()
     timetable = edupage.get_my_timetable(today)
+
+     # Format the timestamps
+    for notification in notifications:
+        notification.formatted_timestamp = time_since_posted(notification.timestamp)
     
     # Get today's meals and convert to list
     meals_data = edupage.get_meals(today)
