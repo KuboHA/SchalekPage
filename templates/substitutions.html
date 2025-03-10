@@ -2,58 +2,121 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Timetable Changes</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Substitutions - SchalekPage</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #1a1c2e, #2d3748);
+            background-attachment: fixed;
+            background-size: cover;
+            min-height: 100vh;
+            margin: 0;
         }
-        .btn {
-            transition: color 0.3s, border-color 0.3s;
+        .card {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .btn:hover {
-            color: #ffffff;
-            border-color: #ffffff;
+        .hover-scale {
+            transition: transform 0.2s;
+        }
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+        button, a, .clickable {
+            cursor: pointer;
         }
     </style>
 </head>
-<body class="bg-gray-800 rounded-lg">
-        <header class="bg-gray-900 p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
-            <button 
-                onclick="location.href='{{ url_for('dashboard') }}'"
-                class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 hover:bg-indigo-600 transition-all duration-300 group"
-            >
-                <i class="fas fa-home text-gray-400 group-hover:text-white transition-colors duration-300"></i>
-            </button>
+<body class="min-h-screen text-gray-100">
+    <!-- Navbar -->
+    <nav class="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 fixed top-0 left-0 right-0 w-full z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-14">
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+                    SchalekPage
+                </h1>
+                <button onclick="location.href='{{ url_for('dashboard') }}'"
+                        class="p-2 rounded-lg hover:bg-gray-800 transition-colors">
+                    <i class="fas fa-home text-gray-400 hover:text-white transition-colors"></i>
+                </button>
+            </div>
         </div>
-    </header>
-    <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-5xl w-full mx-auto mt-8">
-        <div class="flex justify-between items-center mb-6">
-            <a href="{{ url_for('get_timetable_changes', date_str=prev_date.strftime('%Y-%m-%d')) }}" 
-               class="text-white hover:text-gray-300 transition-colors">
-                <i class="fas fa-chevron-left text-lg"></i>
-            </a>
-            <h1 class="text-3xl font-bold text-center text-white">Substitutions for {{ current_date.strftime('%A, %B %d, %Y') }}</h1>
-            <a href="{{ url_for('get_timetable_changes', date_str=next_date.strftime('%Y-%m-%d')) }}"
-               class="text-white hover:text-gray-300 transition-colors">
-                <i class="fas fa-chevron-right text-lg"></i>
-            </a>
-        </div>  
-        <ul class="list-disc list-inside text-gray-300">
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 py-5 pt-16 z-0">
+        <!-- Header with Date Navigation -->
+        <div class="card rounded-xl p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <a href="{{ url_for('get_timetable_changes', date_str=prev_date.strftime('%Y-%m-%d')) }}"
+                   class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-calendar-alt text-indigo-400"></i>
+                    <h2 class="text-xl font-semibold">{{ current_date.strftime('%A, %B %d, %Y') }}</h2>
+                </div>
+                
+                <a href="{{ url_for('get_timetable_changes', date_str=next_date.strftime('%Y-%m-%d')) }}"
+                   class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Title Section -->
+        <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-exchange-alt text-2xl text-indigo-400"></i>
+            <h1 class="text-2xl font-bold text-white">Substitutions</h1>
+        </div>
+        
+        <!-- Substitutions List -->
+        <div class="space-y-3">
             {% if changes %}
                 {% for change in changes %}
-                    <li class="py-2">
-                        <span class="font-bold">{{ change.title }} - Lesson {{ change.lesson_n }}</span>
-                    </li>
+                    <div class="card rounded-xl p-4 hover:bg-gray-800/50 transition-colors duration-200">
+                        <div class="flex items-start">
+                            <!-- Replace clock icon with lesson number -->
+                            <div class="bg-indigo-500/20 rounded-lg mr-4 h-12 w-12 flex items-center justify-center flex-shrink-0">
+                                <span class="text-xl font-bold text-indigo-400">{{ change.lesson_n }}</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-start">
+                                    <h3 class="font-semibold text-lg">{{ change.title }}</h3>
+                                </div>
+                                {% if change.description %}
+                                    <p class="text-sm text-gray-300 mt-1">{{ change.description }}</p>
+                                {% endif %}
+                                
+                                {% if change.detail %}
+                                    <div class="mt-2 text-xs text-gray-400">
+                                        <i class="fas fa-info-circle mr-1.5"></i>
+                                        {{ change.detail }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
             {% else %}
-                <li class="py-2">No substitutions for this day.</li>
+                <div class="card rounded-xl p-6 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="bg-indigo-500/10 p-4 rounded-full">
+                            <i class="fas fa-calendar-check text-3xl text-indigo-400"></i>
+                        </div>
+                        <h3 class="text-xl font-medium text-white">No substitutions today</h3>
+                        <p class="text-gray-400">Your regular schedule is unchanged</p>
+                    </div>
+                </div>
             {% endif %}
-        </ul>
+        </div>
     </div>
 </body>
 </html>

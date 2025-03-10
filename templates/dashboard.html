@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SchalekPage - Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(to bottom right, #1a1c2e, #2d3748);
+            background-attachment: fixed;
+            background-size: cover;
+            min-height: 100vh;
+            margin: 0;
         }
         .card {
             background: rgba(31, 41, 55, 0.7);
@@ -22,6 +26,14 @@
         }
         .hover-scale:hover {
             transform: scale(1.02);
+        }
+        /* Add cursor pointer to all buttons and clickable elements */
+        button, a, .clickable {
+            cursor: pointer;
+        }
+        /* Add specific style for text buttons */
+        button[id^="btn-"] {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -106,7 +118,7 @@
                                             {% endif %}">
                                             {% if menu.number and menu.number.lower() != 'none' %}
                                                 <div class="flex items-center space-x-2 mb-1">
-                                                    <span class="px-2 py-0.5 bg-gray-800/50 rounded-full text-xs font-medium text-green-400">
+                                                    <span class="py-0.5 bg-gray-800/50 rounded-full text-xs font-medium text-green-400">
                                                         <i class="fas fa-utensils mr-1"></i>
                                                         Menu {{ menu.number }}
                                                     </span>
