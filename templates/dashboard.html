@@ -2,40 +2,275 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchalekPage - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #1a1c2e, #2d3748);
         }
-        .btn {
-            transition: color 0.3s, border-color 0.3s;
+        .card {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .btn:hover {
-            color: #ffffff;
-            border-color: #ffffff;
+        .hover-scale {
+            transition: transform 0.2s;
         }
-        .link {
-            color: #60a5fa; /* Tailwind blue-400 */
-            text-decoration: underline;
-        }
-        .link:hover {
-            color: #3b82f6; /* Tailwind blue-500 */
-        }
-        .notification-text a {
-            color: #60a5fa; /* Tailwind blue-400 */
-            text-decoration: underline;
-        }
-        .notification-text a:hover {
-            color: #3b82f6; /* Tailwind blue-500 */
-        }
-        .main-div {
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            padding: 2rem;
+        .hover-scale:hover {
+            transform: scale(1.02);
         }
     </style>
+</head>
+<body class="min-h-screen text-gray-100">
+    <!-- Navbar -->
+    <nav class="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+                        SchalekPage
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-300">{{ student.name }}</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <button onclick="location.href='{{ url_for('get_timetable_changes') }}'"
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
+                <div class="bg-blue-500/20 p-3 rounded-lg">
+                    <i class="fas fa-calendar-alt text-blue-400 text-xl"></i>
+                </div>
+                <span class="font-medium">Substitutions</span>
+            </button>
+            <button onclick="location.href='{{ url_for('grades') }}'"
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
+                <div class="bg-green-500/20 p-3 rounded-lg">
+                    <i class="fas fa-graduation-cap text-green-400 text-xl"></i>
+                </div>
+                <span class="font-medium">Grades</span>
+            </button>
+            <button onclick="location.href='{{ url_for('lunches') }}'"
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
+                <div class="bg-yellow-500/20 p-3 rounded-lg">
+                    <i class="fas fa-utensils text-yellow-400 text-xl"></i>
+                </div>
+                <span class="font-medium">Lunches</span>
+            </button>
+            <button onclick="location.href='{{ url_for('get_timetable') }}'"
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
+                <div class="bg-purple-500/20 p-3 rounded-lg">
+                    <i class="fas fa-clock text-purple-400 text-xl"></i>
+                </div>
+                <span class="font-medium">Timetable</span>
+            </button>
+        </div>
+
+        <!-- Three Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column - Lunch Menu -->
+            <div class="lg:col-span-3">
+                <div class="card rounded-xl p-4 sticky top-20">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">
+                            {% if show_tomorrow %}
+                                Tomorrow's Lunch
+                            {% else %}
+                                Today's Lunch
+                            {% endif %}
+                        </h2>
+                        <a href="{{ url_for('lunches') }}" 
+                           class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                            View All
+                        </a>
+                    </div>
+                    {% if meals %}
+                        <ul class="space-y-3">
+                            {% for meal in meals %}
+                                {% for menu in meal.menus %}
+                                    <li class="relative group">
+                                        <div class="card rounded-lg p-3 transition-all duration-200
+                                            {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
+                                                  (meal.ordered_meal == 'B' and menu.number == 'II.') %}
+                                                ring-2 ring-green-500 bg-green-500/10
+                                            {% endif %}">
+                                            {% if menu.number and menu.number.lower() != 'none' %}
+                                                <div class="flex items-center space-x-2 mb-1">
+                                                    <span class="px-2 py-0.5 bg-gray-800/50 rounded-full text-xs font-medium text-green-400">
+                                                        <i class="fas fa-utensils mr-1"></i>
+                                                        Menu {{ menu.number }}
+                                                    </span>
+                                                    {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
+                                                          (meal.ordered_meal == 'B' and menu.number == 'II.') %}
+                                                        <span class="text-xs text-green-400">
+                                                            <i class="fas fa-check-circle"></i> Ordered
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                            <p class="text-sm {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
+                                                                   (meal.ordered_meal == 'B' and menu.number == 'II.') %}
+                                                                text-white font-medium
+                                                             {% else %}
+                                                                text-gray-300
+                                                             {% endif %}">
+                                                {{ menu.name }}
+                                            </p>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-gray-400 text-sm">
+                            {% if show_tomorrow %}
+                                No meals available tomorrow
+                            {% else %}
+                                No meals available today
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Middle Column - Notifications -->
+            <div class="lg:col-span-6">
+                <div class="card rounded-xl p-6">
+                    <h2 class="text-xl font-semibold mb-6">Notifications</h2>
+                    <div class="space-y-4">
+                        {% for notification in notifications %}
+                            {% if notification.event_type and notification.event_type.value and 
+                                  notification.event_type.value not in ['h_clearcache', 'h_cleardbi', 'h_clearisicdata', 
+                                                                      'h_dailyplan', 'h_znamky', 'confirmation', 'h_contest', 
+                                                                      'h_hideplans', 'h_clearplany'] %}
+                                <div class="card rounded-lg p-4 hover:bg-gray-800/50 transition-colors duration-200">
+                                    <div class="flex items-start space-x-4">
+                                        <div class="flex-shrink-0">
+                                            {% if notification.event_type.value == 'pipnutie' %}
+                                                {% if notification.additional_data.typ == 1 %}
+                                                    <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                        <i class="fa-solid fa-right-to-bracket text-green-400"></i>
+                                                    </div>
+                                                {% elif notification.additional_data.typ == 2 %}
+                                                    <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                                        <i class="fa-solid fa-right-from-bracket text-red-400"></i>
+                                                    </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                                    <i class="fa-solid {{ event_type_icons[notification.event_type.value.lower()] }} text-blue-400"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm text-gray-400 mb-1">
+                                                {{ notification.formatted_timestamp }} • {{ notification.author }}
+                                            </p>
+                                            <div class="prose prose-sm max-w-none text-gray-200">
+                                                {% if notification.text|length > 200 %}
+                                                    {{ notification.text[:200] | safe }}
+                                                    <span id="dots-{{ loop.index }}">...</span>
+                                                    <span id="more-{{ loop.index }}" class="hidden">
+                                                        {{ notification.text[200:] | safe }}
+                                                    </span>
+                                                    <button onclick="toggleText({{ loop.index }})" 
+                                                            id="btn-{{ loop.index }}"
+                                                            class="text-blue-400 hover:text-blue-300 text-sm font-medium">
+                                                        Show more
+                                                    </button>
+                                                {% else %}
+                                                    {{ notification.text | urlize | safe }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Timetable -->
+            <div class="lg:col-span-3">
+                <div class="card rounded-xl p-4 sticky top-20">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">
+                            {% if show_tomorrow %}
+                                Tomorrow's Classes
+                            {% else %}
+                                Today's Classes
+                            {% endif %}
+                        </h2>
+                        <a href="{{ url_for('get_timetable') }}" 
+                           class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                            View All
+                        </a>
+                    </div>
+                    {% if timetable %}
+                        <ul class="space-y-2">
+                            {% for class in timetable %}
+                                <li class="card rounded-lg p-2 hover:bg-gray-800/50 transition-colors duration-200">
+                                    <div class="flex gap-2">
+                                        <div class="flex-shrink-0 w-6 h-6 rounded bg-indigo-500/20 
+                                                    flex items-center justify-center text-indigo-400 font-medium text-sm">
+                                            {{ class.period }}
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <!-- First row: Subject and Classroom -->
+                                            <div class="flex items-center gap-2">
+                                                <p class="text-sm font-medium text-white truncate">
+                                                    {% if class.subject is string %}
+                                                        {% set subject_name = class.subject.split('name="')|last|split('"')|first 
+                                                                        if 'name="' in class.subject else class.subject %}
+                                                    {% else %}
+                                                        {% set subject_name = class.subject.name if class.subject and class.subject.name else 'Cancelled' %}
+                                                    {% endif %}
+                                                    {{ subject_name.title() if subject_name else 'Cancelled' }}
+                                                </p>
+                                                {% if class.classrooms %}
+                                                    <span class="text-xs text-gray-400 truncate">
+                                                        <i class="fas fa-door-open text-indigo-400"></i>
+                                                        {{ class.classrooms | map(attribute='name') | join(', ') }}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            <!-- Second row: Teacher -->
+                                            {% if class.teachers %}
+                                                <div class="mt-0.5 text-xs text-gray-400 truncate">
+                                                    <i class="fas fa-chalkboard-user text-indigo-400 mr-1"></i>
+                                                    {{ class.teachers | map(attribute='name') | join(', ') }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-gray-400 text-sm">
+                            {% if show_tomorrow %}
+                                No classes tomorrow
+                            {% else %}
+                                No classes today
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleText(id) {
             const dots = document.getElementById(`dots-${id}`);
@@ -53,146 +288,5 @@
             }
         }
     </script>
-</head>
-<body class="bg-gray-800 text-gray-200 min-h-screen">
-    <header class="bg-gray-900 p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-white">SchalekPage</h1>
-        </div>
-    </header>
-
-    <div class="mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
-        <!-- Left Sidebar - Lunch Menu -->
-        <div class="w-full lg:w-1/4">
-            <div class="bg-gray-700 rounded-lg p-4 shadow-lg lg:sticky lg:top-8">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-white">Today's Lunch</h2>
-                    <a href="{{ url_for('lunches') }}" class="text-sm text-blue-400 hover:text-blue-300">View All</a>
-                </div>
-                {% if meals %}
-                    <ul class="space-y-2">
-                        {% for meal in meals %}
-                            {% for menu in meal.menus %}
-                                <li class="bg-gray-800 rounded p-2">
-                                    {% if menu.number %}
-                                        <span class="text-xs rounded-full">
-                                            Menu {{ menu.number }}
-                                        </span>
-                                    {% endif %}
-                                    <p class="text-sm mt-1 text-gray-300">{{ menu.name }}</p>
-                                </li>
-                            {% endfor %}
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="text-gray-400 text-sm">No meals available today</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="w-full lg:w-2/4">
-            <div class="bg-gray-800 rounded-lg p-4 lg:p-8 shadow-lg">
-                <h1 class="text-3xl lg:text-4xl font-bold mb-4 text-center text-white">Dashboard</h1>
-                <p class="text-base lg:text-lg mb-6 text-center text-gray-300">Welcome, {{ student.name }}!</p>
-                <div class="flex flex-wrap justify-center gap-4 lg:gap-8 mb-6">
-                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable_changes') }}'">
-                        <i class="fas fa-calendar-alt text-xl lg:text-2xl mr-2"></i> 
-                        <span class="text-sm lg:text-base">Substitutions</span>
-                    </button>
-                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('grades') }}'">
-                        <i class="fas fa-graduation-cap text-xl lg:text-2xl mr-2"></i> 
-                        <span class="text-sm lg:text-base">Grades</span>
-                    </button>
-                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('lunches') }}'">
-                        <i class="fas fa-utensils text-xl lg:text-2xl mr-2"></i> 
-                        <span class="text-sm lg:text-base">Lunches</span>
-                    </button>
-                    <button class="btn text-white border border-gray-500 px-3 lg:px-4 py-2 rounded hover:border-white transition duration-300 flex items-center" onclick="location.href='{{ url_for('get_timetable') }}'">
-                        <i class="fas fa-clock text-xl lg:text-2xl mr-2"></i> 
-                        <span class="text-sm lg:text-base">Timetable</span>
-                    </button>
-                </div>
-                
-                <!-- Notifications -->
-                <div class="bg-gray-700 rounded-lg p-4 lg:p-6">
-                    <h2 class="text-2xl font-bold mb-4 text-center text-white">Notifications</h2>
-                    <ul>
-                        {% for notification in notifications %}
-                            {% if notification.event_type and notification.event_type.value and notification.event_type.value not in ['h_clearcache', 'h_cleardbi', 'h_clearisicdata', 'h_dailyplan', 'h_znamky', 'confirmation', 'h_contest', 'h_hideplans', 'h_clearplany'] %}
-                                <li class="mb-2">
-                                    <div class="bg-gray-800 p-4 rounded-lg shadow-md flex items-center">
-                                        {% if notification.event_type.value == 'pipnutie' %}
-                                            {% if notification.additional_data.typ == 1 %}
-                                                <i class="fa-solid fa-right-to-bracket text-green-400 text-2xl mr-4"></i>
-                                            {% elif notification.additional_data.typ == 2 %}
-                                                <i class="fa-solid fa-right-from-bracket text-red-400 text-2xl mr-4"></i>
-                                            {% endif %}
-                                        {% else %}
-                                            <i class="fa-solid {{ event_type_icons[notification.event_type.value.lower()] }} text-2xl text-white mr-4"></i>
-                                        {% endif %}
-                                        <div>
-                                            <p class="text-sm text-gray-400">{{ notification.formatted_timestamp }}</p>
-                                            <p class="text-lg text-white notification-text">
-                                                {% if notification.text|length > 200 %}
-                                                    {{ notification.text[:200] | safe }}<span id="dots-{{ loop.index }}">...</span><span id="more-{{ loop.index }}" style="display:none">{{ notification.text[200:] | safe }}</span>
-                                                    <button onclick="toggleText({{ loop.index }})" id="btn-{{ loop.index }}" class="link">Show more</button>
-                                                {% else %}
-                                                    {{ notification.text | urlize | safe }}
-                                                {% endif %}
-                                            </p>
-                                            <p class="text-sm text-gray-400">Author: {{ notification.author }}</p>
-                                            <p class="text-sm text-gray-400">Recipient: {{ notification.recipient }}</p>
-                                        </div>
-                                    </div>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Sidebar - Timetable -->
-        <div class="w-full lg:w-1/4">
-            <div class="bg-gray-700 rounded-lg p-4 shadow-lg lg:sticky lg:top-8">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-white">Today's Classes</h2>
-                    <a href="{{ url_for('get_timetable') }}" class="text-sm text-blue-400 hover:text-blue-300">View All</a>
-                </div>
-                {% if timetable %}
-                    <ul class="space-y-2">
-                        {% for class in timetable %}
-                            <li class="bg-gray-800 rounded p-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-2xl font-bold text-indigo-300 min-w-[2rem] text-center">
-                                        {{ class.period }}
-                                    </span>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-xs px-2 py-0.5 bg-gray-700 rounded">
-                                                {{ class.classrooms | map(attribute='name') | join(', ') if class.classrooms else '' }}
-                                            </span>
-                                            <p class="text-sm text-gray-300">
-                                                {% if class.subject is string %}
-                                                    {% set subject_name = class.subject.split('name="')|last|split('"')|first if 'name="' in class.subject else class.subject %}
-                                                {% else %}
-                                                    {% set subject_name = class.subject.name if class.subject.name else class.subject %}
-                                                {% endif %}
-                                                {{ subject_name.title() }} - 
-                                                {{ class.teachers | map(attribute='name') | join(', ') if class.teachers else '' }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="text-gray-400 text-sm">No classes today</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </body>
 </html>

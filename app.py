@@ -114,29 +114,65 @@ def dashboard():
     
     # Get today's timetable
     today = date.today()
-    timetable = edupage.get_my_timetable(today)
+    
+    def should_show_tomorrow():
+        now = datetime.now()  # Set a default time for testing
+        cutoff = now.replace(hour=14, minute=30, second=0, microsecond=0)
+        return now >= cutoff
+
+    # Get timetable for appropriate day
+    if should_show_tomorrow():
+        target_date = today + timedelta(days=1)
+    else:
+        target_date = today
+
+    timetable = edupage.get_my_timetable(target_date)
 
      # Format the timestamps
     for notification in notifications:
         notification.formatted_timestamp = time_since_posted(notification.timestamp)
     
-    # Get today's meals and convert to list
-    meals_data = edupage.get_meals(today)
+    # Get current time and set cutoff
+    now = datetime.now()
+    cutoff_time = now.replace(hour=14, minute=30, second=0, microsecond=0)
+    show_tomorrow = now >= cutoff_time
+    
+    # Get date for meals
+    today = date.today()
+    target_date = today + timedelta(days=1) if show_tomorrow else today
+    
+    # Get meals for appropriate day
+    meals_data = edupage.get_meals(target_date)
+    
+    # Convert meals data to list format
     meals_list = []
     if meals_data:
         if meals_data.snack:
-            meals_list.append(meals_data.snack)
+            meals_list.append({
+                'type': 'Snack',
+                'menus': meals_data.snack.menus,
+                'ordered_meal': meals_data.snack.ordered_meal if meals_data.snack.ordered_meal else 'X'
+            })
         if meals_data.lunch:
-            meals_list.append(meals_data.lunch)
+            meals_list.append({
+                'type': 'Lunch',
+                'menus': meals_data.lunch.menus,
+                'ordered_meal': meals_data.lunch.ordered_meal if meals_data.lunch.ordered_meal else 'X'
+            })
         if meals_data.afternoon_snack:
-            meals_list.append(meals_data.afternoon_snack)
+            meals_list.append({
+                'type': 'Afternoon Snack',
+                'menus': meals_data.afternoon_snack.menus,
+                'ordered_meal': meals_data.afternoon_snack.ordered_meal if meals_data.afternoon_snack.ordered_meal else 'X'
+            })
 
     return render_template('dashboard.html', 
                          student=student_data,
                          notifications=notifications,
                          timetable=timetable,
                          meals=meals_list,
-                        event_type_map=EVENT_TYPE_MAP,
+                         show_tomorrow=show_tomorrow,
+                         event_type_map=EVENT_TYPE_MAP,
                          event_type_icons=EVENT_TYPE_ICONS)
 
 @app.route('/substitutions/', defaults={'date_str': None})
