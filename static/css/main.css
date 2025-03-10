@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary-bg: linear-gradient(135deg, #0f172a, #1e293b);
+  --card-bg: rgba(30, 41, 59, 0.75);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent-blue: #60a5fa;
+  --accent-indigo: #818cf8;
+  --accent-green: #34d399;
+  --accent-yellow: #fbbf24;
+  --accent-purple: #a78bfa;
+  --text-primary: #f3f4f6;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--primary-bg);
+  background-attachment: fixed;
+  background-size: cover;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.hover-scale {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hover-scale:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+button, a, .clickable {
+  cursor: pointer;
+}
+
+button[id^="btn-"] {
+  cursor: pointer;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.5);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 165, 250, 0.7);
+}
+
+/* Enhanced Header Styles */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.section-title i {
+  margin-right: 0.5rem;
+}
+
+/* Card styles */
+.enhanced-card {
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Icon badge */
+.icon-badge {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+/* Fix notification text display */
+.notification-text {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.notification-text img {
+  max-width: 100%;
+  height: auto;
+}
+
+.notification-text a {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .mobile-timetable-container {
+    display: block !important;
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  
+  .mobile-timetable-header {
+    background: rgba(79, 70, 229, 0.2);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(79, 70, 229, 0.2);
+  }
+  
+  .mobile-lunch-container {
+    display: block !important;
+    margin-bottom: 1rem;
+  }
+  
+  .desktop-sections {
+    display: none !important;
+  }
+  
+  .btn-text-mobile {
+    display: none !important;
+  }
+  
+  .btn-icon-mobile {
+    margin: 0 auto !important;
+  }
+  
+  .mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .mobile-action-btn {
+    padding: 0.75rem !important;
+    border-radius: 0.75rem !important;
+  }
+  
+  .sticky-mobile {
+    position: relative !important;
+    top: 0 !important;
+  }
+  
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  
+  .mobile-order-first {
+    order: -1 !important;
+  }
+}
+
+/* Theme colors for different sections */
+.theme-blue {
+  --theme-color: var(--accent-blue);
+  --theme-bg: rgba(96, 165, 250, 0.2);
+}
+
+.theme-green {
+  --theme-color: var(--accent-green);
+  --theme-bg: rgba(52, 211, 153, 0.2);
+}
+
+.theme-yellow {
+  --theme-color: var(--accent-yellow);
+  --theme-bg: rgba(251, 191, 36, 0.2);
+}
+
+.theme-purple {
+  --theme-color: var(--accent-purple);
+  --theme-bg: rgba(167, 139, 250, 0.2);
+}
+
+.theme-icon-badge {
+  background-color: var(--theme-bg);
+  color: var(--theme-color);
+}

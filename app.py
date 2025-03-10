@@ -188,6 +188,12 @@ def get_timetable_changes(date_str):
     prev_date = specific_date - timedelta(days=1)
     next_date = specific_date + timedelta(days=1)
 
+    students = edupage.get_students()
+    if 'student_id' in session and session['student_id']:
+        student_data = next((student for student in students if student.person_id == session['student_id']), None)
+    else:
+        student_data = next((student for student in students if student.name == session['username']), None)
+
     substitution = Substitution(edupage)
     changes = substitution.get_timetable_changes(specific_date)
 
@@ -196,7 +202,7 @@ def get_timetable_changes(date_str):
 
     changes = [change for change in changes if change.change_class == '2.A']
 
-    return render_template('substitutions.html', changes=changes, current_date=specific_date, prev_date=prev_date, next_date=next_date)
+    return render_template('substitutions.html', changes=changes, student=student_data, current_date=specific_date, prev_date=prev_date, next_date=next_date)
 
 
 @app.route('/lunches/', defaults={'date_str': None})
@@ -221,6 +227,12 @@ def lunches(date_str):
     next_date = specific_date + timedelta(days=1)
 
     meals_data = edupage.get_meals(specific_date)
+
+    students = edupage.get_students()
+    if 'student_id' in session and session['student_id']:
+        student_data = next((student for student in students if student.person_id == session['student_id']), None)
+    else:
+        student_data = next((student for student in students if student.name == session['username']), None)
     
     if meals_data is None:
         meals_list = []
@@ -236,6 +248,7 @@ def lunches(date_str):
     return render_template('lunches.html', 
                          meals=meals_list, 
                          current_date=specific_date,
+                         student=student_data,
                          prev_date=prev_date,
                          next_date=next_date)
 
@@ -254,11 +267,16 @@ def grades():
 
     year = edupage.get_school_year()
     grades_data = edupage.get_grades_for_term(year, Term.SECOND)
+    students = edupage.get_students()
+    if 'student_id' in session and session['student_id']:
+        student_data = next((student for student in students if student.person_id == session['student_id']), None)
+    else:
+        student_data = next((student for student in students if student.name == session['username']), None)
     
     if grades_data:
         grades_data.sort(key=lambda x: x.date, reverse=True)
 
-    return render_template('grades.html', grades=grades_data)
+    return render_template('grades.html', grades=grades_data, student=student_data)
 
 @app.route('/timetable/', defaults={'date_str': None})
 @app.route('/timetable/<date_str>')
@@ -282,7 +300,10 @@ def get_timetable(date_str):
     next_date = specific_date + timedelta(days=1)
 
     students = edupage.get_students()
-    student_data = next((student for student in students if student.name == session['username']), None)
+    if 'student_id' in session and session['student_id']:
+        student_data = next((student for student in students if student.person_id == session['student_id']), None)
+    else:
+        student_data = next((student for student in students if student.name == session['username']), None)
     
     if student_data is None:
         return redirect(url_for('index'))
@@ -292,7 +313,7 @@ def get_timetable(date_str):
     if timetable is None:
         timetable = []
 
-    return render_template('timetable.html', timetable=timetable, current_date=specific_date, prev_date=prev_date, next_date=next_date)
+    return render_template('timetable.html', timetable=timetable, student=student_data, current_date=specific_date, prev_date=prev_date, next_date=next_date)
 
 EVENT_TYPE_MAP = {
     "album": "Album",

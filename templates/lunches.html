@@ -2,123 +2,216 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Lunches</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchalekPage - Lunches</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(to bottom right, #1a1c2e, #2d3748);
-        }
-        .card {
-            background: rgba(31, 41, 55, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
-<body class="min-h-screen text-gray-100">
-    <!-- Navbar -->
-    <nav class="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+<body class="min-h-screen text-gray-100 bg-gradient-to-br from-slate-900 to-gray-900">
+    <!-- Navbar with clickable title -->
+    <nav class="bg-gradient-to-r from-slate-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
-                    SchalekPage
-                </h1>
-                <button onclick="location.href='{{ url_for('dashboard') }}'"
-                        class="text-gray-400 hover:text-white transition-colors">
-                    <i class="fas fa-home"></i>
-                </button>
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                        SchalekPage
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if student %}
+                    <span class="text-sm text-gray-300 bg-gray-800/50 px-3 py-1 rounded-full">{{ student.name }}</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto px-4 py-8">
-        <!-- Date Navigation -->
-        <div class="card rounded-xl p-4 mb-8">
-            <div class="flex items-center justify-between">
-                <a href="{{ url_for('lunches', date_str=prev_date.strftime('%Y-%m-%d')) }}" 
-                   class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-                <h2 class="text-xl font-semibold">{{ current_date.strftime('%A, %B %d, %Y') }}</h2>
-                <a href="{{ url_for('lunches', date_str=next_date.strftime('%Y-%m-%d')) }}"
-                   class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
+
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Header with back button -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Lunch Menu</h1>
+                <p class="text-gray-400 text-sm">View and manage your lunch options</p>
             </div>
+            <a href="{{ url_for('dashboard') }}" class="bg-slate-800 hover:bg-slate-700 rounded-lg px-3 py-2 text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fas fa-arrow-left text-sm"></i>
+                <span class="text-sm">Back to dashboard</span>
+            </a>
+        </div>
+        
+        <!-- Date Navigation - Using date iteration -->
+        <div class="flex items-center gap-2 mb-6 overflow-x-auto py-2 scrollbar-hide">
+            {% for i in range(-3, 4) %}
+                {% set is_current = i == 0 %}
+                {% set is_weekend = (current_date.weekday() + i) % 7 >= 5 %}
+                {% set display_date = current_date.replace(day=current_date.day + i) if current_date.day + i > 0 and current_date.day + i <= 31 else current_date %}
+                {% set url = url_for('lunches', date_str=(current_date.replace(day=current_date.day + i) if current_date.day + i > 0 and current_date.day + i <= 31 else current_date).strftime('%Y-%m-%d')) %}
+                
+                <a href="{{ url }}" class="flex-shrink-0 flex flex-col items-center p-3 rounded-xl transition-all
+                    {% if is_current %}
+                        bg-blue-600 text-white shadow-lg
+                    {% elif is_weekend %}
+                        bg-slate-800/50 text-gray-500
+                    {% else %}
+                        bg-slate-800/80 text-gray-300 hover:bg-slate-700
+                    {% endif %}">
+                    <span class="text-xs uppercase {% if is_current %}text-blue-200{% else %}text-gray-400{% endif %}">
+                        {{ display_date.strftime('%a') }}
+                    </span>
+                    <span class="text-xl font-bold mt-1">{{ display_date.strftime('%d') }}</span>
+                    <span class="text-xs {% if is_current %}text-blue-200{% else %}text-gray-400{% endif %}">
+                        {{ display_date.strftime('%b') }}
+                    </span>
+                </a>
+            {% endfor %}
         </div>
 
         <!-- Meals List -->
         {% if meals %}
             <div class="space-y-6">
                 {% for meal in meals %}
-                    <div class="card rounded-xl p-4 {% if meal.ordered_meal == 'X' %}bg-red-500/10 ring-1 ring-red-500/50{% endif %}">
-                        <h3 class="text-2xl font-semibold text-indigo-400">Lunch Menu</h3>
-                        <h3 class="text-lg font-semibold text-indigo-400 mb-4">{{ meal.type }}</h3>
-                        <ul class="space-y-3">
-                            {% for menu in meal.menus %}
-                            <li class="card rounded-lg p-4 hover:bg-gray-800/50 transition-all duration-200
-                            {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
-                                  (meal.ordered_meal == 'B' and menu.number == 'II.') %}
-                                ring-2 ring-green-500 bg-gradient-to-br from-green-500/10 to-green-500/5
-                                shadow-lg shadow-green-500/20 scale-[1.02] hover:scale-[1.03]
-                            {% endif %}">
-                            <div class="flex flex-col space-y-0.5">
-                                <div class="flex items-center justify-between">
-                                    {% if menu.number and menu.number.lower() != 'none' %}
-                                        <span class="{% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
-                                                                   (meal.ordered_meal == 'B' and menu.number == 'II.') %}
-                                                                bg-green-500/20
-                                                            {% else %}
-                                                                bg-gray-800/50
-                                                            {% endif %} 
-                                              rounded-full text-xs font-medium {% if meal.ordered_meal == 'X' %}text-red-400{% else %}text-indigo-400{% endif %}">
-                                            <i class="fas fa-utensils mr-1.5"></i>
-                                            Menu {{ menu.number }}
-                                        </span>
-                                    {% endif %}
-                                    {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
-                                          (meal.ordered_meal == 'B' and menu.number == 'II.') %}
-                                        <span class="text-xs text-green-400 bg-green-500/20 rounded-full font-medium">
-                                            <i class="fas fa-check-circle mr-1"></i> 
-                                            Selected
-                                        </span>
-                                    {% endif %}
+                    <div class="bg-slate-800/80 backdrop-blur rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+                        <!-- Meal Header -->
+                        <div class="bg-gradient-to-r from-slate-800 to-slate-700 p-4 border-b border-slate-600/30">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mr-3">
+                                        <i class="fas fa-utensils text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium text-white">{{ meal.type }}</h3>
+                                        <p class="text-xs text-gray-400">
+                                            {% if meal.ordered_meal and meal.ordered_meal != 'X' %}
+                                                Menu {{ 'I' if meal.ordered_meal == 'A' else 'II' }} selected
+                                            {% else %}
+                                                No selection
+                                            {% endif %}
+                                        </p>
+                                    </div>
                                 </div>
-                                <p class="text-sm {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or 
-                                                   (meal.ordered_meal == 'B' and menu.number == 'II.') %}
-                                                text-white font-medium
-                                             {% else %}
-                                                text-gray-300
-                                             {% endif %}">
-                                    {{ menu.name }}
-                                </p>
-                                {% if menu.allergens %}
-                                    <p class="text-xs text-gray-400">
-                                        <i class="fas fa-exclamation-triangle text-yellow-400 mr-1.5"></i>
-                                        Allergens: {{ menu.allergens }}
-                                    </p>
+                                {% if meal.ordered_meal and meal.ordered_meal != 'X' %}
+                                    <div class="bg-blue-900/30 px-3 py-1 rounded-full text-xs text-blue-300">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Selected
+                                    </div>
+                                {% else %}
+                                    <div class="bg-red-900/30 px-3 py-1 rounded-full text-xs text-red-300">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        Not Selected
+                                    </div>
                                 {% endif %}
                             </div>
-                        </li>
+                        </div>
+                        
+                        <!-- Meal Options -->
+                        <div class="p-4">
+                            {% for menu in meal.menus %}
+                                {% set is_selected = (meal.ordered_meal == 'A' and menu.number == 'I.') or (meal.ordered_meal == 'B' and menu.number == 'II.') %}
+                                {% set has_number = menu.number and menu.number.lower() != 'none' %}
+                                {% set is_first = loop.first %}
+                                {% set is_last = loop.last %}
+                                <div class="mb-4 last:mb-0">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="{% if is_selected %}bg-blue-600{% else %}bg-slate-700{% endif %} h-8 w-8 rounded-lg flex items-center justify-center shadow-inner">
+                                            {% if has_number %}
+                                                <span class="font-medium text-sm">{{ menu.number[0] }}</span>
+                                            {% elif is_first %}
+                                                <i class="fas fa-utensil-spoon text-sm {% if is_selected %}text-white{% else %}text-gray-400{% endif %}"></i>
+                                            {% else %}
+                                                <i class="fas fa-utensils text-sm {% if is_selected %}text-white{% else %}text-gray-400{% endif %}"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    {% if has_number %}
+                                                        <span class="font-medium text-sm">Menu {{ menu.number }}</span>
+                                                    {% elif is_first %}
+                                                        <span class="font-medium text-sm text-gray-400">Soup</span>
+                                                    {% else %}
+                                                        <span class="font-medium text-sm text-gray-400">Side Dish</span>
+                                                    {% endif %}
+                                                    {% if is_selected %}
+                                                        <span class="bg-green-500 h-2 w-2 rounded-full"></span>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if is_selected %}
+                                                    <span class="text-xs bg-green-900/30 text-green-400 px-2 py-0.5 rounded-full">Selected</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="relative pl-11">
+                                        <!-- Vertical line connecting from number to content -->
+                                        <div class="absolute left-4 top-0 bottom-0 w-px {% if is_selected %}bg-blue-500/50{% else %}bg-slate-700{% endif %}"></div>
+                                        
+                                        <!-- Menu content -->
+                                        <div class="{% if is_selected %}bg-gradient-to-r from-blue-900/10 to-transparent border-l-2 border-blue-500{% else %}bg-slate-700/20 border-l-2 border-slate-700{% endif %} p-3 rounded-r-lg">
+                                            <p class="text-sm {% if is_selected %}text-white{% else %}text-gray-300{% endif %}">
+                                                {{ menu.name }}
+                                            </p>
+                                            
+                                            {% if menu.allergens %}
+                                                <div class="mt-2 flex items-center text-xs text-gray-400">
+                                                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-1.5"></i>
+                                                    <span>Allergens: {{ menu.allergens }}</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             {% endfor %}
-                        </ul>
-                        {% if meal.ordered_meal == 'X' %}
-                            <div class="mt-3 text-center text-sm text-red-400">
-                                <i class="fas fa-exclamation-circle mr-1"></i>
-                                No meal selected
-                            </div>
-                        {% endif %}
+                        </div>
                     </div>
                 {% endfor %}
             </div>
         {% else %}
-            <div class="card rounded-xl p-6 text-center text-gray-400">
-                No meals available for this day
+            <div class="bg-slate-800/80 rounded-xl p-8 text-center shadow-lg border border-slate-700/50">
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-900/20 flex items-center justify-center mb-4">
+                        <i class="fas fa-utensils text-blue-400 text-2xl"></i>
+                    </div>
+                    <p class="text-white font-medium mb-2">No meals available</p>
+                    <p class="text-sm text-gray-400 max-w-xs">There are no meal options available for this date. Try selecting a different day.</p>
+                </div>
             </div>
         {% endif %}
+
+        <!-- Mobile quick navigation -->
+        <div class="fixed bottom-6 left-4 right-4 md:hidden">
+            <div class="flex justify-between">
+                <a href="{{ url_for('lunches', date_str=prev_date.strftime('%Y-%m-%d')) }}" 
+                   class="bg-slate-800 p-3 rounded-full shadow-lg">
+                    <i class="fas fa-chevron-left text-blue-400"></i>
+                </a>
+                
+                <a href="{{ url_for('index') }}" 
+                   class="bg-blue-600 px-4 py-3 rounded-full shadow-lg flex items-center gap-2">
+                    <i class="fas fa-arrow-left text-white text-sm"></i>
+                    <span class="text-white text-sm">Dashboard</span>
+                </a>
+                
+                <a href="{{ url_for('lunches', date_str=next_date.strftime('%Y-%m-%d')) }}"
+                   class="bg-slate-800 p-3 rounded-full shadow-lg">
+                    <i class="fas fa-chevron-right text-blue-400"></i>
+                </a>
+            </div>
+        </div>
     </div>
+
+    <style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
 </body>
 </html>

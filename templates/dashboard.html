@@ -6,42 +6,240 @@
     <title>SchalekPage - Dashboard</title>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --primary-bg: linear-gradient(135deg, #0f172a, #1e293b);
+            --card-bg: rgba(30, 41, 59, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-blue: #60a5fa;
+            --accent-indigo: #818cf8;
+            --accent-green: #34d399;
+            --accent-yellow: #fbbf24;
+            --accent-purple: #a78bfa;
+            --text-primary: #f3f4f6;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(to bottom right, #1a1c2e, #2d3748);
+            background: var(--primary-bg);
             background-attachment: fixed;
             background-size: cover;
             min-height: 100vh;
             margin: 0;
+            color: var(--text-primary);
         }
+
         .card {
-            background: rgba(31, 41, 55, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
+
         .hover-scale {
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+
         .hover-scale:hover {
-            transform: scale(1.02);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         }
+
         button, a, .clickable {
             cursor: pointer;
         }
+
         button[id^="btn-"] {
             cursor: pointer;
         }
+        
+        /* Fix notification text display */
+        .notification-text {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            hyphens: auto;
+        }
+        
+        .notification-text img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .notification-text a {
+            display: inline-block;
+            max-width: 100%;
+            overflow-wrap: break-word;
+        }
+        
+        /* Text truncation with whole word preservation */
+        .smart-truncate {
+            position: relative;
+            display: inline;
+        }
+        
+        /* Enhanced Mobile optimization */
+        @media (max-width: 768px) {
+            .sticky-mobile {
+                position: relative !important;
+                top: 0 !important;
+            }
+            
+            /* Better touch targets for mobile */
+            .mobile-touch-target {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Better readability on mobile */
+            .mobile-text {
+                font-size: 16px !important;
+            }
+            
+            /* Fix for slow animation on mobile */
+            .mobile-fast-transition {
+                transition-duration: 0.15s !important;
+            }
+            
+            /* Fix for scrolling issues on mobile */
+            .mobile-scroll {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Better spacing for mobile content */
+            .mobile-p {
+                padding: 12px !important;
+            }
+            
+            /* Safe area for notched phones */
+            .mobile-safe-bottom {
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+            
+            /* Add more visible active states for touch */
+            .mobile-active-state:active {
+                background: rgba(49, 58, 85, 0.8) !important;
+            }
+            
+            /* Mobile column order classes */
+            .mobile-order-first {
+                order: -1 !important;
+            }
+            .mobile-order-0 {
+                order: 0 !important;
+            }
+            .mobile-order-1 {
+                order: 1 !important;
+            }
+            .mobile-order-2 {
+                order: 2 !important;
+            }
+            .mobile-order-3 {
+                order: 3 !important;
+            }
+            
+            /* Mobile-specific touch targets */
+            .mobile-card {
+                padding: 12px !important;
+            }
+            
+            /* Improved tap targets */
+            .mobile-tap-area {
+                min-height: 44px;
+            }
+            
+            /* Hide text on buttons for mobile */
+            .btn-text-mobile {
+                display: none !important;
+            }
+            
+            /* Center icons on mobile */
+            .btn-icon-mobile {
+                margin: 0 auto !important;
+            }
+            
+            /* Adjust button size on mobile */
+            .btn-mobile {
+                padding: 1rem !important;
+                display: flex !important;
+                justify-content: center !important;
+            }
+
+            .mobile-timetable-container {
+                display: block !important;
+                border-radius: 1rem;
+                overflow: hidden;
+                margin-bottom: 1rem;
+            }
+            
+            .mobile-timetable-header {
+                background: rgba(79, 70, 229, 0.2);
+                padding: 1rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid rgba(79, 70, 229, 0.2);
+            }
+            
+            .mobile-lunch-container {
+                display: block !important;
+                margin-bottom: 1rem;
+            }
+            
+            .desktop-sections {
+                display: none !important;
+            }
+            
+            .btn-text-mobile {
+                display: none !important;
+            }
+            
+            .btn-icon-mobile {
+                margin: 0 auto !important;
+            }
+            
+            .mobile-actions {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.5rem;
+            }
+            
+            .mobile-action-btn {
+                padding: 0.75rem !important;
+                border-radius: 0.75rem !important;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(96, 165, 250, 0.5);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(96, 165, 250, 0.7);
+        }
     </style>
 </head>
-<body class="min-h-screen text-gray-100">
-    <!-- Navbar -->
-    <nav class="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+<body class="min-h-screen text-gray-100 mobile-safe-bottom">
+    <!-- Modernized Navbar -->
+    <nav class="bg-gradient-to-r from-gray-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
                         SchalekPage
                     </h1>
                 </div>
@@ -55,34 +253,34 @@
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <button onclick="location.href='{{ url_for('get_timetable_changes') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-blue-500/20 p-3 rounded-lg">
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile">
+                <div class="bg-blue-500/20 p-3 rounded-lg btn-icon-mobile">
                     <i class="fas fa-calendar-alt text-blue-400 text-xl"></i>
                 </div>
-                <span class="font-medium">Substitutions</span>
+                <span class="font-medium btn-text-mobile">Substitutions</span>
             </button>
             <button onclick="location.href='{{ url_for('grades') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-green-500/20 p-3 rounded-lg">
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile">
+                <div class="bg-green-500/20 p-3 rounded-lg btn-icon-mobile">
                     <i class="fas fa-graduation-cap text-green-400 text-xl"></i>
                 </div>
-                <span class="font-medium">Grades</span>
+                <span class="font-medium btn-text-mobile">Grades</span>
             </button>
             <button onclick="location.href='{{ url_for('lunches') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-yellow-500/20 p-3 rounded-lg">
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile">
+                <div class="bg-yellow-500/20 p-3 rounded-lg btn-icon-mobile">
                     <i class="fas fa-utensils text-yellow-400 text-xl"></i>
                 </div>
-                <span class="font-medium">Lunches</span>
+                <span class="font-medium btn-text-mobile">Lunches</span>
             </button>
             <button onclick="location.href='{{ url_for('get_timetable') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-purple-500/20 p-3 rounded-lg">
+                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile">
+                <div class="bg-purple-500/20 p-3 rounded-lg btn-icon-mobile">
                     <i class="fas fa-clock text-purple-400 text-xl"></i>
                 </div>
-                <span class="font-medium">Timetable</span>
+                <span class="font-medium btn-text-mobile">Timetable</span>
             </button>
         </div>
 
@@ -163,7 +361,8 @@
                                   notification.event_type.value not in ['h_clearcache', 'h_cleardbi', 'h_clearisicdata', 
                                                                       'h_dailyplan', 'h_znamky', 'confirmation', 'h_contest', 
                                                                       'h_hideplans', 'h_clearplany'] %}
-                                <div class="card rounded-lg p-4 hover:bg-gray-800/50 transition-colors duration-200">
+                                <!-- Enhance notification styling to prevent overflow -->
+                                <div class="card rounded-lg p-4 hover:bg-gray-800/50 transition-colors duration-200 overflow-hidden">
                                     <div class="flex items-start space-x-4">
                                         <div class="flex-shrink-0">
                                             {% if notification.event_type.value == 'pipnutie' %}
@@ -182,24 +381,38 @@
                                                 </div>
                                             {% endif %}
                                         </div>
-                                        <div class="flex-1 min-w-0">
+                                        <div class="flex-1 min-w-0 overflow-hidden">
                                             <p class="text-sm text-gray-400 mb-1">
                                                 {{ notification.formatted_timestamp }} • {{ notification.author }}
                                             </p>
-                                            <div class="prose prose-sm max-w-none text-gray-200">
+                                            <div class="prose prose-sm max-w-none text-gray-200 break-words overflow-hidden">
                                                 {% if notification.text|length > 200 %}
-                                                    {{ notification.text[:200] | safe }}
-                                                    <span id="dots-{{ loop.index }}">...</span>
-                                                    <span id="more-{{ loop.index }}" class="hidden">
-                                                        {{ notification.text[200:] | safe }}
-                                                    </span>
+                                                    <div id="text-{{ loop.index }}" class="notification-text">
+                                                        {% set truncated_text = notification.text[:200] %}
+                                                        {% set last_space = truncated_text.rfind(' ') %}
+                                                        {% if last_space > 180 %}
+                                                            {{ notification.text[:last_space] | safe }}
+                                                        {% else %}
+                                                            {{ notification.text[:200] | safe }}
+                                                        {% endif %}
+                                                        <span id="dots-{{ loop.index }}">...</span>
+                                                        <span id="more-{{ loop.index }}" class="hidden">
+                                                            {% if last_space > 180 %}
+                                                                {{ notification.text[last_space:] | safe }}
+                                                            {% else %}
+                                                                {{ notification.text[200:] | safe }}
+                                                            {% endif %}
+                                                        </span>
+                                                    </div>
                                                     <button onclick="toggleText({{ loop.index }})" 
                                                             id="btn-{{ loop.index }}"
-                                                            class="text-blue-400 hover:text-blue-300 text-sm font-medium">
+                                                            class="text-blue-400 hover:text-blue-300 text-sm font-medium mt-1 block">
                                                         Show more
                                                     </button>
                                                 {% else %}
-                                                    {{ notification.text | urlize | safe }}
+                                                    <div class="notification-text break-words">
+                                                        {{ notification.text | urlize | safe }}
+                                                    </div>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -282,6 +495,7 @@
     </div>
 
     <script>
+        // Improved toggle text function
         function toggleText(id) {
             const dots = document.getElementById(`dots-${id}`);
             const moreText = document.getElementById(`more-${id}`);
@@ -297,6 +511,57 @@
                 moreText.style.display = "inline";
             }
         }
+        
+        // Mobile optimization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add touch feedback
+            const touchElements = document.querySelectorAll('.mobile-active-state');
+            touchElements.forEach(elem => {
+                elem.addEventListener('touchstart', function() {
+                    this.style.transform = 'scale(0.98)';
+                }, {passive: true});
+                
+                elem.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                }, {passive: true});
+            });
+            
+            // Fix iOS scroll behavior
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+                document.querySelectorAll('.mobile-scroll').forEach(el => {
+                    el.style.WebkitOverflowScrolling = 'touch';
+                });
+            }
+            
+            // Improve performance on mobile
+            if (window.innerWidth <= 768) {
+                // Delay less important operations
+                setTimeout(() => {
+                    // Any heavy operations can go here
+                }, 100);
+            }
+        });
+
+        // Enhanced mobile optimization for column ordering and button display
+        document.addEventListener('DOMContentLoaded', function() {
+            function applyMobileStyles() {
+                if (window.innerWidth <= 768) {
+                    // First, handle column ordering on mobile
+                    document.querySelector('.mobile-order-first').style.order = "-1";
+                    document.querySelector('.mobile-order-2').style.order = "2";
+                    document.querySelector('.mobile-order-3').style.order = "3";
+                } else {
+                    // Reset ordering on desktop
+                    document.querySelectorAll('.mobile-order-first, .mobile-order-2, .mobile-order-3').forEach(el => {
+                        el.style.order = "";
+                    });
+                }
+            }
+
+            // Apply on page load and whenever window is resized
+            applyMobileStyles();
+            window.addEventListener('resize', applyMobileStyles);
+        });
     </script>
 </body>
 </html>
