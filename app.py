@@ -1,19 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session
 from edupage_api import Edupage
-from edupage_api.people import EduAccount  # Import the EduAccount class
-from edupage_api.messages import Messages  # Import the Messages class
 from edupage_api.substitution import Substitution, TimetableChange
-from edupage_api.grades import Grades, EduGrade
-from edupage_api.lunches import Lunches  # Import the Lunches class
-from edupage_api.ringing import RingingTimes, RingingType, RingingTime  # Import the Ringing classes
 from datetime import datetime, date, timedelta
 from typing import Optional, Union
-from collections import defaultdict
-import re
 from enum import Enum
 
 app = Flask(__name__)
-app.secret_key = '738-531-827'  # Change this to a real secret key in production
+app.secret_key = '738-531-827'
 
 class EduStudent:
     def __init__(self, person_id: int, name: str, gender: str, in_school_since: Optional[datetime], class_id: int, number_in_class: int):
@@ -47,26 +40,32 @@ def login():
     password = request.form['password']
     subdomain = request.form['subdomain']
 
-    # Format the username from NameSurname to Name Surname
-    formatted_username = re.sub(r'(?<!^)(?=[A-Z])', ' ', username)
-
     edupage = Edupage()
     try:
-        # Attempt to log in
         two_factor_login = edupage.login(username, password, subdomain)
 
+        student_info = None
+        try:
+            students = edupage.get_students()
+            for student in students:
+                if username.lower() in student.name.lower().replace(' ', ''):
+                    student_info = student
+                    break
+        except Exception as e:
+            print(f"Error getting student info: {e}")
+
         if two_factor_login:
-            # Handle 2FA if needed
             session['subdomain'] = subdomain
-            session['username'] = formatted_username
+            session['username'] = student_info.name if student_info else username
+            session['student_id'] = student_info.person_id if student_info else None
             session['password'] = password  # Store password in session
             session['session_id'] = edupage.session.cookies.get('PHPSESSID')
             return redirect(url_for('two_factor'))
         else:
-            # Login successful, no 2FA needed
             session['subdomain'] = subdomain
-            session['username'] = formatted_username
-            session['password'] = password  # Store password in session
+            session['username'] = student_info.name if student_info else username
+            session['student_id'] = student_info.person_id if student_info else None
+            session['password'] = password
             session['session_id'] = edupage.session.cookies.get('PHPSESSID')
             return redirect(url_for('dashboard'))
     except Exception as e:
@@ -81,15 +80,12 @@ def two_factor():
         code = request.form['code']
         edupage = Edupage()
         try:
-            # Recreate the Edupage object
             edupage.login(session['username'], session['password'], session['subdomain'])
             edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-            # Finish 2FA
             two_factor_login = edupage.login(session['username'], session['password'], session['subdomain'])
             two_factor_login.finish_with_code(code)
 
-            # Update session data
             session['session_id'] = edupage.session.cookies.get('PHPSESSID')
             return redirect(url_for('dashboard'))
         except Exception as e:
@@ -106,22 +102,21 @@ def dashboard():
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-    # Get student data
     students = edupage.get_students()
-    student_data = next((student for student in students if student.name == session['username']), None)
+    if 'student_id' in session and session['student_id']:
+        student_data = next((student for student in students if student.person_id == session['student_id']), None)
+    else:
+        student_data = next((student for student in students if student.name == session['username']), None)
     
-    # Get notifications
     notifications = edupage.get_notifications()
     
-    # Get today's timetable
     today = date.today()
     
     def should_show_tomorrow():
-        now = datetime.now()  # Set a default time for testing
+        now = datetime.now()
         cutoff = now.replace(hour=14, minute=30, second=0, microsecond=0)
         return now >= cutoff
 
-    # Get timetable for appropriate day
     if should_show_tomorrow():
         target_date = today + timedelta(days=1)
     else:
@@ -129,23 +124,18 @@ def dashboard():
 
     timetable = edupage.get_my_timetable(target_date)
 
-     # Format the timestamps
     for notification in notifications:
         notification.formatted_timestamp = time_since_posted(notification.timestamp)
     
-    # Get current time and set cutoff
     now = datetime.now()
     cutoff_time = now.replace(hour=14, minute=30, second=0, microsecond=0)
     show_tomorrow = now >= cutoff_time
     
-    # Get date for meals
     today = date.today()
     target_date = today + timedelta(days=1) if show_tomorrow else today
     
-    # Get meals for appropriate day
     meals_data = edupage.get_meals(target_date)
     
-    # Convert meals data to list format
     meals_list = []
     if meals_data:
         if meals_data.snack:
@@ -227,7 +217,6 @@ def lunches(date_str):
     except ValueError:
         specific_date = date.today()
 
-    # Calculate previous and next dates
     prev_date = specific_date - timedelta(days=1)
     next_date = specific_date + timedelta(days=1)
 
@@ -263,11 +252,9 @@ def grades():
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-    # Get all grades for the current school year
     year = edupage.get_school_year()
     grades_data = edupage.get_grades_for_term(year, Term.SECOND)
     
-    # Sort grades by date, newest first
     if grades_data:
         grades_data.sort(key=lambda x: x.date, reverse=True)
 
@@ -279,12 +266,10 @@ def get_timetable(date_str):
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
         return redirect(url_for('index'))
 
-    # Recreate the Edupage object
     edupage = Edupage()
     edupage.login(session['username'], session['password'], session['subdomain'])
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
-    # Fetch timetable for the logged-in student
     try:
         if date_str:
             specific_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -293,7 +278,6 @@ def get_timetable(date_str):
     except ValueError:
         specific_date = date.today()
 
-    # Calculate previous and next dates
     prev_date = specific_date - timedelta(days=1)
     next_date = specific_date + timedelta(days=1)
 
