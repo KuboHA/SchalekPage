@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta
 from typing import Optional, Union
 from collections import defaultdict
 import re
+from enum import Enum
 
 app = Flask(__name__)
 app.secret_key = '738-531-827'  # Change this to a real secret key in production
@@ -213,6 +214,10 @@ def lunches(date_str):
                          prev_date=prev_date,
                          next_date=next_date)
 
+class Term(Enum):
+    FIRST = "P1"
+    SECOND = "P2"
+
 @app.route('/grades')
 def grades():
     if 'subdomain' not in session or 'username' not in session or 'session_id' not in session:
@@ -223,7 +228,8 @@ def grades():
     edupage.session.cookies.set('PHPSESSID', session['session_id'])
 
     # Get all grades for the current school year
-    grades_data = edupage.get_grades()
+    year = edupage.get_school_year()
+    grades_data = edupage.get_grades_for_term(year, Term.SECOND)
     
     # Sort grades by date, newest first
     if grades_data:
