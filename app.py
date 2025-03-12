@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from edupage_api import Edupage
 from edupage_api.substitution import Substitution, TimetableChange
 from datetime import datetime, date, timedelta
 from typing import Optional, Union
 from enum import Enum
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = '738-531-827'
@@ -313,7 +314,20 @@ def get_timetable(date_str):
     if timetable is None:
         timetable = []
 
-    return render_template('timetable.html', timetable=timetable, student=student_data, current_date=specific_date, prev_date=prev_date, next_date=next_date)
+    # Calculate a 7-day range centered around current date
+    date_range = []
+    for i in range(-3, 4):
+        date_range.append(specific_date + timedelta(days=i))
+
+    return render_template('timetable.html', 
+                           timetable=timetable, 
+                           student=student_data, 
+                           datetime=datetime,
+                           timedelta=timedelta,
+                           current_date=specific_date, 
+                           prev_date=prev_date, 
+                           next_date=next_date,
+                           date_range=date_range)  # Add this line
 
 EVENT_TYPE_MAP = {
     "album": "Album",
