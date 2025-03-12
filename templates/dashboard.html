@@ -640,174 +640,176 @@
         </div>
     </nav>
 
-    <!-- Main Content - Restructured for mobile -->
+    <!-- Main Content Container -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Quick Actions - Moved to the very top on mobile -->
-        <div class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-            <button onclick="location.href='{{ url_for('get_timetable_changes') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-blue" style="--btn-index: 0">
-                <div class="bg-blue-500/20 p-3 rounded-lg btn-icon-mobile">
-                    <i class="fas fa-calendar-alt"></i>
-                </div>
-                <span class="font-medium btn-text-mobile">Substitutions</span>
-            </button>
-            <button onclick="location.href='{{ url_for('grades') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-green" style="--btn-index: 1">
-                <div class="bg-green-500/20 p-3 rounded-lg btn-icon-mobile">
-                    <i class="fas fa-graduation-cap"></i>
-                </div>
-                <span class="font-medium btn-text-mobile">Grades</span>
-            </button>
-            <button onclick="location.href='{{ url_for('lunches') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-yellow" style="--btn-index: 2">
-                <div class="bg-yellow-500/20 p-3 rounded-lg btn-icon-mobile">
-                    <i class="fas fa-utensils"></i>
-                </div>
-                <span class="font-medium btn-text-mobile">Lunches</span>
-            </button>
-            <button onclick="location.href='{{ url_for('get_timetable') }}'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-purple" style="--btn-index: 3">
-                <div class="bg-purple-500/20 p-3 rounded-lg btn-icon-mobile">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <span class="font-medium btn-text-mobile">Timetable</span>
-            </button>
-        </div>
+        <!-- Mobile-only actions and cards -->
+        <div class="block md:hidden">
+            <!-- Quick Actions - Mobile version -->
+            <div class="grid grid-cols-4 gap-2 mb-4">
+                <button onclick="location.href='{{ url_for('get_timetable_changes') }}'"
+                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-blue" style="--btn-index: 0">
+                    <div class="bg-blue-500/20 p-3 rounded-lg btn-icon-mobile">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <span class="font-medium btn-text-mobile">Substitutions</span>
+                </button>
+                <button onclick="location.href='{{ url_for('grades') }}'"
+                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-green" style="--btn-index: 1">
+                    <div class="bg-green-500/20 p-3 rounded-lg btn-icon-mobile">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <span class="font-medium btn-text-mobile">Grades</span>
+                </button>
+                <button onclick="location.href='{{ url_for('lunches') }}'"
+                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-yellow" style="--btn-index: 2">
+                    <div class="bg-yellow-500/20 p-3 rounded-lg btn-icon-mobile">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <span class="font-medium btn-text-mobile">Lunches</span>
+                </button>
+                <button onclick="location.href='{{ url_for('get_timetable') }}'"
+                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-purple" style="--btn-index: 3">
+                    <div class="bg-purple-500/20 p-3 rounded-lg btn-icon-mobile">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <span class="font-medium btn-text-mobile">Timetable</span>
+                </button>
+            </div>
 
-        <!-- Mobile-first layout: Cards moved to top in a swipable row -->
-        <div class="block md:hidden lg:hidden">
-            <div class="mobile-info-cards">
-                <!-- Timetable Card (Always first in swiping order) -->
-                <div class="mobile-info-card">
-                    <div class="mobile-card-header">
-                        <h3>
-                            <div class="mobile-card-icon mobile-timetable-icon">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            {% if show_tomorrow %}
-                                Tomorrow's Classes
-                            {% else %}
-                                Today's Classes
-                            {% endif %}
-                        </h3>
-                        <a href="{{ url_for('get_timetable') }}" class="mobile-card-link">
-                            View All
-                        </a>
-                    </div>
-                    <div class="mobile-card-content">
-                        {% if timetable %}
-                            {% for class in timetable %}
-                                <div class="mobile-timetable-item">
-                                    <div class="mobile-period-number">
-                                        {{ class.period }}
-                                    </div>
-                                    <div class="mobile-class-info">
-                                        <div class="mobile-class-subject">
-                                            {% if class.subject is string %}
-                                                {% if 'name="' in class.subject and 'short="' in class.subject %}
-                                                    {% set subject_name = class.subject.split('name="')[1].split('"')[0] %}
-                                                {% elif 'name="' in class.subject %}
-                                                    {% set subject_name = class.subject.split('name="')[1].split('"')[0] %}
-                                                {% else %}
-                                                    {% set subject_name = class.subject %}
-                                                {% endif %}
-                                            {% else %}
-                                                {% set subject_name = class.subject.name if class.subject and class.subject.name else 
-                                                                     (class.subject.short if class.subject and class.subject.short else 'Cancelled') %}
-                                            {% endif %}
-                                            {{ subject_name.capitalize() if subject_name else 'Cancelled' }}
-                                        </div>
-                                        <div class="mobile-class-details">
-                                            {% if class.teachers %}
-                                                <div class="mobile-class-teacher">
-                                                    <i class="fas fa-user"></i>
-                                                    {{ class.teachers | map(attribute='name') | join(', ') }}
-                                                </div>
-                                            {% endif %}
-                                            {% if class.classrooms %}
-                                                <div class="mobile-class-room">
-                                                    <i class="fas fa-door-open"></i>
-                                                    {{ class.classrooms | map(attribute='name') | join(', ') }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
+            <!-- Mobile-first swipable cards -->
+            <div class="mb-6">
+                <div class="mobile-info-cards">
+                    <!-- Timetable Card (Always first in swiping order) -->
+                    <div class="mobile-info-card">
+                        <div class="mobile-card-header">
+                            <h3>
+                                <div class="mobile-card-icon mobile-timetable-icon">
+                                    <i class="fas fa-clock"></i>
                                 </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="mobile-empty-message">
-                                <i class="fas fa-calendar-day d-block"></i>
-                                <p>
-                                    {% if show_tomorrow %}
-                                        No classes tomorrow
-                                    {% else %}
-                                        No classes today
-                                    {% endif %}
-                                </p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Lunch Card (Second in swiping order) -->
-                <div class="mobile-info-card">
-                    <div class="mobile-card-header">
-                        <h3>
-                            <div class="mobile-card-icon mobile-lunch-icon">
-                                <i class="fas fa-utensils"></i>
-                            </div>
-                            {% if show_tomorrow %}
-                                Tomorrow's Lunch
-                            {% else %}
-                                Today's Lunch
-                            {% endif %}
-                        </h3>
-                        <a href="{{ url_for('lunches') }}" class="mobile-card-link">
-                            View All
-                        </a>
-                    </div>
-                    <div class="mobile-card-content">
-                        {% if meals %}
-                            {% for meal in meals %}
-                                {% for menu in meal.menus %}
-                                    <div class="mobile-lunch-item {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or (meal.ordered_meal == 'B' and menu.number == 'II.') %}mobile-lunch-ordered{% endif %}">
-                                        {% if menu.number and menu.number.lower() != 'none' %}
-                                            <div class="mobile-lunch-menu-tag">
-                                                <i class="fas fa-utensils"></i>
-                                                Menu {{ menu.number }}
-                                                {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or (meal.ordered_meal == 'B' and menu.number == 'II.') %}
-                                                    <i class="fas fa-check-circle ml-1"></i>
+                                {% if show_tomorrow %}
+                                    Tomorrow's Classes
+                                {% else %}
+                                    Today's Classes
+                                {% endif %}
+                            </h3>
+                            <a href="{{ url_for('get_timetable') }}" class="mobile-card-link">
+                                View All
+                            </a>
+                        </div>
+                        <div class="mobile-card-content">
+                            {% if timetable %}
+                                {% for class in timetable %}
+                                    <div class="mobile-timetable-item">
+                                        <div class="mobile-period-number">
+                                            {{ class.period }}
+                                        </div>
+                                        <div class="mobile-class-info">
+                                            <div class="mobile-class-subject">
+                                                {% if class.subject is string %}
+                                                    {% if 'name="' in class.subject and 'short="' in class.subject %}
+                                                        {% set subject_name = class.subject.split('name="')[1].split('"')[0] %}
+                                                    {% elif 'name="' in class.subject %}
+                                                        {% set subject_name = class.subject.split('name="')[1].split('"')[0] %}
+                                                    {% else %}
+                                                        {% set subject_name = class.subject %}
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% set subject_name = class.subject.name if class.subject and class.subject.name else 
+                                                                         (class.subject.short if class.subject and class.subject.short else 'Cancelled') %}
+                                                {% endif %}
+                                                {{ subject_name.capitalize() if subject_name else 'Cancelled' }}
+                                            </div>
+                                            <div class="mobile-class-details">
+                                                {% if class.teachers %}
+                                                    <div class="mobile-class-teacher">
+                                                        <i class="fas fa-user"></i>
+                                                        {{ class.teachers | map(attribute='name') | join(', ') }}
+                                                    </div>
+                                                {% endif %}
+                                                {% if class.classrooms %}
+                                                    <div class="mobile-class-room">
+                                                        <i class="fas fa-door-open"></i>
+                                                        {{ class.classrooms | map(attribute='name') | join(', ') }}
+                                                    </div>
                                                 {% endif %}
                                             </div>
-                                        {% endif %}
-                                        <div class="mobile-lunch-text">
-                                            {{ menu.name }}
                                         </div>
                                     </div>
                                 {% endfor %}
-                            {% endfor %}
-                        {% else %}
-                            <div class="mobile-empty-message">
-                                <i class="fas fa-utensils d-block"></i>
-                                <p>
-                                    {% if show_tomorrow %}
-                                        No meals available tomorrow
-                                    {% else %}
-                                        No meals available today
-                                    {% endif %}
-                                </p>
-                            </div>
-                        {% endif %}
+                            {% else %}
+                                <div class="mobile-empty-message">
+                                    <i class="fas fa-calendar-day d-block"></i>
+                                    <p>
+                                        {% if show_tomorrow %}
+                                            No classes tomorrow
+                                        {% else %}
+                                            No classes today
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Lunch Card (Second in swiping order) -->
+                    <div class="mobile-info-card">
+                        <div class="mobile-card-header">
+                            <h3>
+                                <div class="mobile-card-icon mobile-lunch-icon">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                {% if show_tomorrow %}
+                                    Tomorrow's Lunch
+                                {% else %}
+                                    Today's Lunch
+                                {% endif %}
+                            </h3>
+                            <a href="{{ url_for('lunches') }}" class="mobile-card-link">
+                                View All
+                            </a>
+                        </div>
+                        <div class="mobile-card-content">
+                            {% if meals %}
+                                {% for meal in meals %}
+                                    {% for menu in meal.menus %}
+                                        <div class="mobile-lunch-item {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or (meal.ordered_meal == 'B' and menu.number == 'II.') %}mobile-lunch-ordered{% endif %}">
+                                            {% if menu.number and menu.number.lower() != 'none' %}
+                                                <div class="mobile-lunch-menu-tag">
+                                                    <i class="fas fa-utensils"></i>
+                                                    Menu {{ menu.number }}
+                                                    {% if (meal.ordered_meal == 'A' and menu.number == 'I.') or (meal.ordered_meal == 'B' and menu.number == 'II.') %}
+                                                        <i class="fas fa-check-circle ml-1"></i>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                            <div class="mobile-lunch-text">
+                                                {{ menu.name }}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="mobile-empty-message">
+                                    <i class="fas fa-utensils d-block"></i>
+                                    <p>
+                                        {% if show_tomorrow %}
+                                            No meals available tomorrow
+                                        {% else %}
+                                            No meals available today
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="mobile-pagination">
-                <div class="mobile-pagination-dot active" data-index="0"></div>
-                <div class="mobile-pagination-dot" data-index="1"></div>
+                
+                <div class="mobile-pagination">
+                    <div class="mobile-pagination-dot active" data-index="0"></div>
+                    <div class="mobile-pagination-dot" data-index="1"></div>
+                </div>
             </div>
         </div>
-    </div>
 
         <!-- Desktop-only: Original quick actions layout -->
         <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -1055,5 +1057,90 @@
             </div>
         </div>
     </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fix for pagination dots not updating on swipe
+        const mobileInfoCards = document.querySelector('.mobile-info-cards');
+        const paginationDots = document.querySelectorAll('.mobile-pagination-dot');
+        
+        if (mobileInfoCards && paginationDots.length > 0) {
+            // Initial setup - make sure the first dot is active
+            paginationDots[0].classList.add('active');
+            paginationDots[1].classList.remove('active');
+            
+            // Update dots on scroll
+            mobileInfoCards.addEventListener('scroll', function() {
+                const cardWidth = mobileInfoCards.querySelector('.mobile-info-card').offsetWidth + 12; // width + margin
+                const scrollPosition = mobileInfoCards.scrollLeft;
+                
+                // Calculate which card is most visible
+                const activeIndex = Math.round(scrollPosition / cardWidth);
+                
+                // Update the active dot
+                paginationDots.forEach((dot, index) => {
+                    if (index === activeIndex) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Add tap behavior to dots
+            paginationDots.forEach((dot, index) => {
+                dot.addEventListener('click', function() {
+                    const cardWidth = mobileInfoCards.querySelector('.mobile-info-card').offsetWidth + 12;
+                    mobileInfoCards.scrollTo({
+                        left: index * cardWidth,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Update active state immediately for better feedback
+                    paginationDots.forEach((d, i) => {
+                        d.classList.toggle('active', i === index);
+                    });
+                });
+            });
+            
+            // Add touch event detection for better mobile experience
+            let startX = 0;
+            let currentX = 0;
+            
+            mobileInfoCards.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+            }, {passive: true});
+            
+            mobileInfoCards.addEventListener('touchmove', function(e) {
+                if (!startX) return;
+                currentX = e.touches[0].clientX;
+            }, {passive: true});
+            
+            mobileInfoCards.addEventListener('touchend', function() {
+                if (!startX || !currentX) return;
+                
+                const cardWidth = mobileInfoCards.querySelector('.mobile-info-card').offsetWidth + 12;
+                const currentIndex = Math.round(mobileInfoCards.scrollLeft / cardWidth);
+                const difference = startX - currentX;
+                
+                // Set threshold for swipe
+                if (Math.abs(difference) > 50) {
+                    // Calculate new index based on swipe direction
+                    let newIndex = difference > 0 ? currentIndex + 1 : currentIndex - 1;
+                    // Ensure index is within bounds
+                    newIndex = Math.max(0, Math.min(newIndex, paginationDots.length - 1));
+                    
+                    // Update active state
+                    paginationDots.forEach((dot, index) => {
+                        dot.classList.toggle('active', index === newIndex);
+                    });
+                }
+                
+                // Reset values
+                startX = 0;
+                currentX = 0;
+            }, {passive: true});
+        }
+    });
+</script>
 </body>
 </html>
