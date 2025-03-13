@@ -149,79 +149,26 @@
             background-color: rgba(107, 114, 128, 0.2);
             color: #d1d5db;
         }
-        
-        /* Header navigation styles */
-        .header {
-            background-color: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-        
-        .nav-link {
-            padding: 0.5rem 0.75rem;
-            color: #9ca3af;
-            transition: color 0.2s;
-            font-size: 0.9rem;
-        }
-        
-        .nav-link:hover,
-        .nav-link.active {
-            color: white;
-        }
-        
-        .nav-link.active {
-            border-bottom: 2px solid #818cf8;
-        }
     </style>
 </head>
 <body class="min-h-screen text-gray-100 mobile-safe-bottom bg-gray-900" x-data="pageTransition()" x-init="init()">
-    <!-- Header navigation -->
-    <header class="header shadow-lg">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex flex-col sm:flex-row">
-                <!-- Logo & Brand -->
-                <div class="flex items-center justify-between py-3">
+    <!-- Enhanced Navbar -->
+    <nav class="bg-gradient-to-r from-slate-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
                     <a href="{{ url_for('dashboard') }}" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
                         SchalekPage
                     </a>
-                    <!-- Student info on mobile -->
-                    <div class="sm:hidden">
-                        {% if student %}
-                        <span class="text-sm text-gray-300 bg-gray-800/50 px-2 py-1 rounded">{{ student.name }}</span>
-                        {% endif %}
-                    </div>
                 </div>
-                
-                <!-- Navigation links -->
-                <div class="flex flex-1 items-center justify-between sm:justify-end">
-                    <nav class="flex overflow-x-auto py-2 sm:py-0 -mx-4 px-4 sm:px-0 sm:mx-0 space-x-2">
-                        <a href="{{ url_for('dashboard') }}" class="nav-link">
-                            <i class="fas fa-home mr-1.5"></i> Home
-                        </a>
-                        <a href="{{ url_for('get_timetable') }}" class="nav-link">
-                            <i class="fas fa-calendar-day mr-1.5"></i> Timetable
-                        </a>
-                        <a href="{{ url_for('get_timetable_changes') }}" class="nav-link active">
-                            <i class="fas fa-exchange-alt mr-1.5"></i> Substitutions
-                        </a>
-                        <a href="{{ url_for('lunches') }}" class="nav-link">
-                            <i class="fas fa-utensils mr-1.5"></i> Lunch
-                        </a>
-                    </nav>
-                    
-                    <!-- Student info on desktop -->
-                    <div class="hidden sm:block ml-6">
-                        {% if student %}
-                        <span class="text-sm text-gray-300 bg-gray-800/50 px-3 py-1.5 rounded-full">{{ student.name }}</span>
-                        {% endif %}
-                    </div>
+                <div class="flex items-center space-x-4">
+                    {% if student %}
+                    <span class="text-sm text-gray-300">{{ student.name }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
-    </header>
+    </nav>
 
     <!-- Main Content -->
     <div class="max-w-6xl mx-auto px-4 py-5 pt-6 z-0 page-transition" :class="{ 'opacity-50': isLoading }">
