@@ -3,98 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SchalekPage</title>
+    <title>SchalekPage - Substitutions</title>
+    <script src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js" defer></script>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .page-transition {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .mobile-safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .timetable {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        
+        .timetable th {
+            text-align: center;
+            padding: 0.75rem 0.5rem;
+            background-color: rgba(30, 41, 59, 0.5);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #f3f4f6;
+            border-bottom: 2px solid rgba(99, 102, 241, 0.2);
+        }
+        
+        .timetable td {
+            padding: 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.2s;
+        }
+        
+        .timetable tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .period-number {
+            width: 4rem;
+            text-align: center;
+            background-color: rgba(99, 102, 241, 0.1);
+            font-weight: bold;
+            color: #a5b4fc;
+            padding: 1rem 0.5rem;
+            font-size: 1.125rem;
+            border-right: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .period-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+            font-weight: normal;
+        }
+        
+        .substitution-card {
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            height: 100%;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            margin: 0.5rem 0;
+            background-color: rgba(31, 41, 55, 0.4);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+        
+        .substitution-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            opacity: 0.85;
+            transition: all 0.3s;
+        }
+        
+        .substitution-card:hover {
+            background-color: rgba(31, 41, 55, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .substitution-card:hover::before {
+            opacity: 1;
+            width: 6px;
+        }
+        
+        .substitution-card.type-change::before,
+        .substitution-card.type-substitution::before {
+            background-color: #eab308;
+        }
+        
+        .substitution-card.type-remove::before,
+        .substitution-card.type-deletion::before,
+        .substitution-card.type-removal::before {
+            background-color: #ef4444;
+        }
+        
+        .substitution-card.type-add::before,
+        .substitution-card.type-addition::before {
+            background-color: #22c55e;
+        }
+        
+        .substitution-card.type-classroom_change::before {
+            background-color: #3b82f6;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .badge-red {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .badge-yellow {
+            background-color: rgba(234, 179, 8, 0.2);
+            color: #fde047;
+        }
+        
+        .badge-blue {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+        
+        .badge-green {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        
+        .badge-gray {
+            background-color: rgba(107, 114, 128, 0.2);
+            color: #d1d5db;
+        }
+        
+        /* Header navigation styles */
+        .header {
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        
+        .nav-link {
+            padding: 0.5rem 0.75rem;
+            color: #9ca3af;
+            transition: color 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .nav-link:hover,
+        .nav-link.active {
+            color: white;
+        }
+        
+        .nav-link.active {
+            border-bottom: 2px solid #818cf8;
+        }
+    </style>
 </head>
-<body class="min-h-screen text-gray-100">
-    <!-- Enhanced Navbar -->
-    <nav class="bg-gradient-to-r from-slate-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+<body class="min-h-screen text-gray-100 mobile-safe-bottom bg-gray-900" x-data="pageTransition()" x-init="init()">
+    <!-- Header navigation -->
+    <header class="header shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex flex-col sm:flex-row">
+                <!-- Logo & Brand -->
+                <div class="flex items-center justify-between py-3">
+                    <a href="{{ url_for('dashboard') }}" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
                         SchalekPage
-                    </h1>
+                    </a>
+                    <!-- Student info on mobile -->
+                    <div class="sm:hidden">
+                        {% if student %}
+                        <span class="text-sm text-gray-300 bg-gray-800/50 px-2 py-1 rounded">{{ student.name }}</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    {% if student %}
-                    <span class="text-sm text-gray-300">{{ student.name }}</span>
-                    {% endif %}
+                
+                <!-- Navigation links -->
+                <div class="flex flex-1 items-center justify-between sm:justify-end">
+                    <nav class="flex overflow-x-auto py-2 sm:py-0 -mx-4 px-4 sm:px-0 sm:mx-0 space-x-2">
+                        <a href="{{ url_for('dashboard') }}" class="nav-link">
+                            <i class="fas fa-home mr-1.5"></i> Home
+                        </a>
+                        <a href="{{ url_for('get_timetable') }}" class="nav-link">
+                            <i class="fas fa-calendar-day mr-1.5"></i> Timetable
+                        </a>
+                        <a href="{{ url_for('get_timetable_changes') }}" class="nav-link active">
+                            <i class="fas fa-exchange-alt mr-1.5"></i> Substitutions
+                        </a>
+                        <a href="{{ url_for('lunches') }}" class="nav-link">
+                            <i class="fas fa-utensils mr-1.5"></i> Lunch
+                        </a>
+                    </nav>
+                    
+                    <!-- Student info on desktop -->
+                    <div class="hidden sm:block ml-6">
+                        {% if student %}
+                        <span class="text-sm text-gray-300 bg-gray-800/50 px-3 py-1.5 rounded-full">{{ student.name }}</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </nav>
+    </header>
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Header with Date Navigation -->
-        <div class="card rounded-xl p-4 mb-6">
-            <div class="flex items-center justify-between">
-                <a href="{{ url_for('get_timetable_changes', date_str=prev_date.strftime('%Y-%m-%d')) }}"
-                   class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-                
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-calendar-alt text-indigo-400"></i>
-                    <h2 class="text-xl font-semibold">{{ current_date.strftime('%A, %B %d, %Y') }}</h2>
-                </div>
-                
-                <a href="{{ url_for('get_timetable_changes', date_str=next_date.strftime('%Y-%m-%d')) }}"
-                   class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
+    <div class="max-w-6xl mx-auto px-4 py-5 pt-6 z-0 page-transition" :class="{ 'opacity-50': isLoading }">
+        <!-- Title and Date Navigation - Matching Timetable.html -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-white">
+                    Substitutions
+                </h1>
+                <p class="text-gray-400 mt-2">
+                    {{ current_date.strftime('%A, %d %B %Y') }}
+                    {% if student_class %}
+                    <span class="ml-2 px-2 py-0.5 bg-indigo-500/20 rounded-md text-xs text-indigo-300 font-medium">
+                        Class {{ student_class }}
+                    </span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mt-4 sm:mt-0">
+                <button @click="navigateTo('{{ url_for('get_timetable_changes', date_str=prev_date.strftime('%Y-%m-%d')) }}')" 
+                   class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-chevron-left sm:mr-2"></i><span class="sm:inline hidden">Previous Day</span>
+                </button>
+                <button @click="navigateTo('{{ url_for('get_timetable_changes') }}')" 
+                   class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors">
+                    Today
+                </button>
+                <button @click="navigateTo('{{ url_for('get_timetable_changes', date_str=next_date.strftime('%Y-%m-%d')) }}')" 
+                   class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                    <span class="sm:inline hidden">Next Day</span><i class="fas fa-chevron-right sm:ml-2"></i>
+                </button>
             </div>
         </div>
         
-        <!-- Title Section -->
-        <div class="flex items-center gap-3 mb-4">
-            <i class="fas fa-exchange-alt text-2xl text-indigo-400"></i>
-            <h1 class="text-2xl font-bold text-white">Substitutions</h1>
-        </div>
-        
-        <!-- Substitutions List -->
-        <div class="space-y-3">
-            {% if changes %}
-                {% for change in changes %}
-                    <div class="card rounded-xl p-4 hover:bg-gray-800/50 transition-colors duration-200">
-                        <div class="flex items-start">
-                            <!-- Replace clock icon with lesson number -->
-                            <div class="bg-indigo-500/20 rounded-lg mr-4 h-12 w-12 flex items-center justify-center flex-shrink-0">
-                                <span class="text-xl font-bold text-indigo-400">{{ change.lesson_n }}</span>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex items-start">
-                                    <h3 class="font-semibold text-lg">{{ change.title }}</h3>
-                                </div>
-                                {% if change.description %}
-                                    <p class="text-sm text-gray-300 mt-1">{{ change.description }}</p>
-                                {% endif %}
-                                
-                                {% if change.detail %}
-                                    <div class="mt-2 text-xs text-gray-400">
-                                        <i class="fas fa-info-circle mr-1.5"></i>
-                                        {{ change.detail }}
+        <!-- Timetable Substitutions -->
+        {% if changes %}
+            <div class="overflow-auto rounded-xl bg-gray-800/50 border border-gray-700/50 shadow-xl">
+                <table class="timetable">
+                    <thead>
+                        <tr>
+                            <th class="text-left rounded-tl-lg pl-4">Period</th>
+                            <th class="text-left rounded-tr-lg">Changes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set current_period = None %}
+                        {% set changes_by_period = {} %}
+                        
+                        {% for change in changes %}
+                            {% set period = change.lesson_n %}
+                            {% if period not in changes_by_period %}
+                                {% set changes_by_period = changes_by_period | default({}) %}
+                                {% set _ = changes_by_period.update({period: []}) %}
+                            {% endif %}
+                            {% set _ = changes_by_period[period].append(change) %}
+                        {% endfor %}
+                        
+                        {% for period in changes_by_period | sort %}
+                            <tr>
+                                <td class="period-number">
+                                    {{ period }}
+                                </td>
+                                <td class="p-2 sm:p-3">
+                                    <div class="space-y-3">
+                                        {% for change in changes_by_period[period] %}
+                                            {% if change.action %}
+                                                {% set change_type = change.action %}
+                                            {% elif change.change_type %}
+                                                {% set change_type = change.change_type %}
+                                            {% else %}
+                                                {% set change_type = "other" %}
+                                            {% endif %}
+                                            
+                                            <div class="substitution-card type-{{ change_type }}">
+                                                <div class="flex flex-col gap-2">
+                                                    <!-- Header with subject and badge -->
+                                                    <div class="flex justify-between items-start">
+                                                        <h3 class="font-bold text-sm sm:text-base">
+                                                            {% if change.title %}
+                                                                {{ change.title }}
+                                                            {% elif change.subject %}
+                                                                {{ change.subject }}
+                                                            {% else %}
+                                                                Period {{ period }}
+                                                            {% endif %}
+                                                        </h3>
+                                                        
+                                                        <div class="
+                                                            {% if change_type == 'remove' or change_type == 'deletion' or change_type == 'removal' %}
+                                                                badge badge-red
+                                                            {% elif change_type == 'change' or change_type == 'substitution' %}
+                                                                badge badge-yellow
+                                                            {% elif change_type == 'add' or change_type == 'addition' %}
+                                                                badge badge-green
+                                                            {% elif change_type == 'classroom_change' %}
+                                                                badge badge-blue
+                                                            {% else %}
+                                                                badge badge-gray
+                                                            {% endif %}
+                                                        ">
+                                                            {% if change_type == 'remove' or change_type == 'deletion' or change_type == 'removal' %}
+                                                                <i class="fas fa-times-circle"></i> Cancelled
+                                                            {% elif change_type == 'change' or change_type == 'substitution' %}
+                                                                <i class="fas fa-exchange-alt"></i> Substitution
+                                                            {% elif change_type == 'add' or change_type == 'addition' %}
+                                                                <i class="fas fa-plus-circle"></i> Addition
+                                                            {% elif change_type == 'classroom_change' %}
+                                                                <i class="fas fa-door-open"></i> Room Change
+                                                            {% elif change_type == 'teacher_change' %}
+                                                                <i class="fas fa-user-edit"></i> Teacher Change
+                                                            {% else %}
+                                                                <i class="fas fa-info-circle"></i> Change
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Details section -->
+                                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                                        {% if change.original_teacher %}
+                                                            <div class="bg-gray-800/60 px-3 py-1.5 rounded flex justify-between">
+                                                                <span class="text-gray-400">Original:</span>
+                                                                <span>{{ change.original_teacher }}</span>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if change.teacher %}
+                                                            <div class="bg-gray-800/60 px-3 py-1.5 rounded flex justify-between">
+                                                                <span class="text-gray-400">Substitution:</span>
+                                                                <span>{{ change.teacher }}</span>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if change.classroom %}
+                                                            <div class="bg-gray-800/60 px-3 py-1.5 rounded flex justify-between">
+                                                                <span class="text-gray-400">Room:</span>
+                                                                <span>{{ change.classroom }}</span>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    {% if change.note %}
+                                                        <div class="text-xs p-2 bg-indigo-900/20 border border-indigo-500/20 rounded">
+                                                            <div class="flex gap-2">
+                                                                <i class="fas fa-info-circle text-indigo-400 mt-0.5"></i>
+                                                                <span>{{ change.note }}</span>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
                                     </div>
-                                {% endif %}
-                            </div>
-                        </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="card rounded-xl p-6 text-center bg-gray-800/50 border border-gray-700/50 shadow-xl">
+                <div class="flex flex-col items-center gap-4">
+                    <div class="bg-indigo-500/10 p-5 rounded-full">
+                        <i class="fas fa-calendar-check text-4xl text-indigo-400"></i>
                     </div>
-                {% endfor %}
-            {% else %}
-                <div class="card rounded-xl p-6 text-center">
-                    <div class="flex flex-col items-center gap-3">
-                        <div class="bg-indigo-500/10 p-4 rounded-full">
-                            <i class="fas fa-calendar-check text-3xl text-indigo-400"></i>
-                        </div>
-                        <h3 class="text-xl font-medium text-white">No substitutions today</h3>
+                    <div>
+                        <h3 class="text-xl font-medium text-white mb-1">No substitutions today</h3>
                         <p class="text-gray-400">Your regular schedule is unchanged</p>
                     </div>
+                    <a href="{{ url_for('get_timetable') }}" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-lg text-white text-sm inline-flex items-center gap-2">
+                        <i class="fas fa-calendar-day"></i>
+                        <span>View Regular Timetable</span>
+                    </a>
                 </div>
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
     </div>
+    
+    <!-- AlpineJS Script -->
+    <script>
+        function pageTransition() {
+            return {
+                isLoading: false,
+                init() {
+                    // Listen for link clicks
+                    this.addEventListeners();
+                },
+                addEventListeners() {
+                    document.addEventListener('click', (e) => {
+                        const link = e.target.closest('a');
+                        if (link && link.href && link.href.startsWith(window.location.origin) && !link.dataset.noTransition) {
+                            e.preventDefault();
+                            this.navigateTo(link.href);
+                        }
+                    });
+                },
+                navigateTo(url) {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 200);
+                }
+            }
+        }
+    </script>
 </body>
 </html>

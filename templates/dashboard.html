@@ -649,7 +649,7 @@
                 <button onclick="location.href='{{ url_for('get_timetable_changes') }}'"
                         class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-blue" style="--btn-index: 0">
                     <div class="bg-blue-500/20 p-3 rounded-lg btn-icon-mobile">
-                        <i class="fas fa-calendar-alt"></i>
+                        <i class="fas fa-exchange-alt"></i>
                     </div>
                     <span class="font-medium btn-text-mobile">Substitutions</span>
                 </button>
@@ -816,7 +816,7 @@
             <button onclick="location.href='{{ url_for('get_timetable_changes') }}'"
                     class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
                 <div class="bg-blue-500/20 p-3 rounded-lg">
-                    <i class="fas fa-calendar-alt text-blue-400"></i>
+                    <i class="fas fa-exchange-alt text-blue-400"></i>
                 </div>
                 <span class="font-medium">Substitutions</span>
             </button>
@@ -950,16 +950,16 @@
                                                         {% set truncated_text = notification.text[:200] %}
                                                         {% set last_space = truncated_text.rfind(' ') %}
                                                         {% if last_space > 180 %}
-                                                            {{ notification.text[:last_space] | safe }}
+                                                            {{ notification.text[:last_space] | urlize | safe }}
                                                         {% else %}
-                                                            {{ notification.text[:200] | safe }}
+                                                            {{ notification.text[:200] | urlize | safe }}
                                                         {% endif %}
                                                         <span id="dots-{{ loop.index }}">...</span>
                                                         <span id="more-{{ loop.index }}" class="hidden">
                                                             {% if last_space > 180 %}
-                                                                {{ notification.text[last_space:] | safe }}
+                                                                {{ notification.text[last_space:] | urlize | safe }}
                                                             {% else %}
-                                                                {{ notification.text[200:] | safe }}
+                                                                {{ notification.text[200:] | urlize | safe }}
                                                             {% endif %}
                                                         </span>
                                                     </div>
@@ -1141,6 +1141,23 @@
             }, {passive: true});
         }
     });
+
+    // Add this function to handle text expansion for long notifications
+    function toggleText(id) {
+        const dots = document.getElementById(`dots-${id}`);
+        const moreText = document.getElementById(`more-${id}`);
+        const button = document.getElementById(`btn-${id}`);
+
+        if (moreText.classList.contains("hidden")) {
+            dots.style.display = "none";
+            moreText.classList.remove("hidden");
+            button.textContent = "Show less";
+        } else {
+            dots.style.display = "inline";
+            moreText.classList.add("hidden");
+            button.textContent = "Show more";
+        }
+    }
 </script>
 </body>
 </html>

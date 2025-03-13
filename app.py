@@ -194,17 +194,43 @@ def get_timetable_changes(date_str):
         student_data = next((student for student in students if student.person_id == session['student_id']), None)
     else:
         student_data = next((student for student in students if student.name == session['username']), None)
-
+    
+    # Define class_id from student data
+    class_id = None
+    if student_data:
+        # Check if student_data has class_id attribute directly
+        if hasattr(student_data, 'class_id'):
+            class_id = student_data.class_id
+        # Try alternative ways to get class_id if the direct attribute isn't available
+        elif hasattr(student_data, 'data') and isinstance(student_data.data, dict):
+            class_id = student_data.data.get('triedaid')
+        elif hasattr(student_data, '_class_id'):
+            class_id = student_data._class_id
+    
+    # Get substitutions
     substitution = Substitution(edupage)
     changes = substitution.get_timetable_changes(specific_date)
 
-    if changes is None:
+    if changes is None: 
         changes = []
 
-    changes = [change for change in changes if change.change_class == '2.A']
+    # Get student's class name using get_classes method
+    class_name = None
+    if class_id:
+            classes = edupage.get_classes()
+    for class_obj in classes:
+        if hasattr(class_obj, 'class_id') and class_obj.class_id == class_id:
+            class_name = class_obj.short if hasattr(class_obj, 'short') else class_obj.name
 
-    return render_template('substitutions.html', changes=changes, student=student_data, current_date=specific_date, prev_date=prev_date, next_date=next_date)
+    changes = [change for change in changes if change.change_class == class_name]
 
+
+    return render_template('substitutions.html', 
+                          changes=changes, 
+                          student=student_data,   # Pass class name to template
+                          current_date=specific_date, 
+                          prev_date=prev_date, 
+                          next_date=next_date)
 
 @app.route('/lunches/', defaults={'date_str': None})
 @app.route('/lunches/<date_str>')
