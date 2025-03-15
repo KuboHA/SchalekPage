@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SchalekPage - Substitutions</title>
     <script src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js" defer></script>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="../static/css/style.css">  
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <style>
@@ -149,6 +149,116 @@
             background-color: rgba(107, 114, 128, 0.2);
             color: #d1d5db;
         }
+
+        /* Add these mobile-specific styles */
+        .mobile-period-card {
+            background-color: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+        
+        .mobile-period-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mobile-period-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .mobile-period-number {
+            background-color: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .mobile-period-subject {
+            font-weight: 600;
+            color: #e5e7eb;
+            font-size: 1rem;
+        }
+        
+        .mobile-period-details {
+            margin-top: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .mobile-period-detail {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+        }
+        
+        .mobile-period-detail i {
+            color: #9ca3af;
+        }
+        
+        .mobile-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1rem;
+            background-color: rgba(31, 41, 55, 0.3);
+            border: 1px solid rgba(75, 85, 99, 0.2);
+            border-radius: 0.75rem;
+        }
+        
+        .mobile-empty-state-icon {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+            width: 4rem;
+            height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-bottom: 1rem;
+        }
+        
+        .mobile-empty-state-icon i {
+            font-size: 2rem;
+        }
+
+        /* Add these responsive styles */
+        .desktop-table {
+            display: none;  /* Hidden by default (mobile) */
+        }
+        
+        .mobile-cards {
+            display: block;  /* Visible by default (mobile) */
+        }
+        
+        @media (min-width: 640px) {
+            .desktop-table {
+                display: block;  /* Show on sm screens and larger */
+            }
+            
+            .mobile-cards {
+                display: none;  /* Hide on sm screens and larger */
+            }
+        }
+        
+        /* Keep all your other styles */
     </style>
 </head>
 <body class="min-h-screen text-gray-100 mobile-safe-bottom bg-gray-900" x-data="pageTransition()" x-init="init()">
@@ -202,148 +312,136 @@
                 </button>
             </div>
         </div>
-        
-        <!-- Timetable Substitutions -->
-        {% if changes %}
-            <div class="overflow-auto rounded-xl bg-gray-800/50 border border-gray-700/50 shadow-xl">
-                <table class="timetable">
-                    <thead>
-                        <tr>
-                            <th class="text-left rounded-tl-lg pl-4">Period</th>
-                            <th class="text-left rounded-tr-lg">Changes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set current_period = None %}
-                        {% set changes_by_period = {} %}
-                        
-                        {% for change in changes %}
-                            {% set period = change.lesson_n %}
-                            {% if period not in changes_by_period %}
-                                {% set changes_by_period = changes_by_period | default({}) %}
-                                {% set _ = changes_by_period.update({period: []}) %}
-                            {% endif %}
-                            {% set _ = changes_by_period[period].append(change) %}
-                        {% endfor %}
-                        
-                        {% for period in changes_by_period | sort %}
-                            <tr>
-                                <td class="period-number">
-                                    {{ period }}
-                                </td>
-                                <td class="p-2 sm:p-3">
-                                    <div class="space-y-3">
-                                        {% for change in changes_by_period[period] %}
-                                            {% if change.action %}
-                                                {% set change_type = change.action %}
-                                            {% elif change.change_type %}
-                                                {% set change_type = change.change_type %}
+
+        <div class="relative">
+            <div class="day-container active">
+                <!-- Desktop view -->
+                <div class="card rounded-xl p-6 overflow-hidden desktop-table day-card">
+                <div class="overflow-x-auto desktop-table hidden sm:block">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="py-3 px-4 text-left text-sm font-medium text-indigo-300">Period</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-indigo-300">Details</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-indigo-300">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% if changes %}
+                            {% for change in changes %}
+                            <tr class="timetable-row border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                                <td class="py-3 px-4 text-white">
+                                    <div class="flex items-center">
+                                        <span class="inline-block w-7 h-7 rounded-full bg-indigo-500/20 text-center leading-7 text-indigo-300 font-medium">
+                                            {% if change.lesson_n %}
+                                                {{ change.lesson_n }}
                                             {% else %}
-                                                {% set change_type = "other" %}
+                                                -
                                             {% endif %}
-                                            
-                                            <div class="substitution-card type-{{ change_type }}">
-                                                <div class="flex flex-col gap-2">
-                                                    <!-- Header with subject and badge -->
-                                                    <div class="flex justify-between items-start">
-                                                        <h3 class="font-bold text-sm sm:text-base">
-                                                            {% if change.title %}
-                                                                {{ change.title }}
-                                                            {% elif change.subject %}
-                                                                {{ change.subject }}
-                                                            {% else %}
-                                                                Period {{ period }}
-                                                            {% endif %}
-                                                        </h3>
-                                                        
-                                                        <div class="
-                                                            {% if change_type == 'remove' or change_type == 'deletion' or change_type == 'removal' %}
-                                                                badge badge-red
-                                                            {% elif change_type == 'change' or change_type == 'substitution' %}
-                                                                badge badge-yellow
-                                                            {% elif change_type == 'add' or change_type == 'addition' %}
-                                                                badge badge-green
-                                                            {% elif change_type == 'classroom_change' %}
-                                                                badge badge-blue
-                                                            {% else %}
-                                                                badge badge-gray
-                                                            {% endif %}
-                                                        ">
-                                                            {% if change_type == 'remove' or change_type == 'deletion' or change_type == 'removal' %}
-                                                                <i class="fas fa-times-circle"></i> Cancelled
-                                                            {% elif change_type == 'change' or change_type == 'substitution' %}
-                                                                <i class="fas fa-exchange-alt"></i> Substitution
-                                                            {% elif change_type == 'add' or change_type == 'addition' %}
-                                                                <i class="fas fa-plus-circle"></i> Addition
-                                                            {% elif change_type == 'classroom_change' %}
-                                                                <i class="fas fa-door-open"></i> Room Change
-                                                            {% elif change_type == 'teacher_change' %}
-                                                                <i class="fas fa-user-edit"></i> Teacher Change
-                                                            {% else %}
-                                                                <i class="fas fa-info-circle"></i> Change
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <!-- Details section -->
-                                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                                                        {% if change.original_teacher %}
-                                                            <div class="bg-gray-800/60 px-3 py-1.5 rounded flex justify-between">
-                                                                <span class="text-gray-400">Original:</span>
-                                                                <span>{{ change.original_teacher }}</span>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if change.teacher %}
-                                                            <div class="bg-gray-800/60 px-3 py-1.5 rounded flex justify-between">
-                                                                <span class="text-gray-400">Substitution:</span>
-                                                                <span>{{ change.teacher }}</span>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if change.classroom %}
-                                                            <div class="bg-gray-800/60 px-3 py-1.5 rounded flex justify-between">
-                                                                <span class="text-gray-400">Room:</span>
-                                                                <span>{{ change.classroom }}</span>
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
-                                                    
-                                                    {% if change.note %}
-                                                        <div class="text-xs p-2 bg-indigo-900/20 border border-indigo-500/20 rounded">
-                                                            <div class="flex gap-2">
-                                                                <i class="fas fa-info-circle text-indigo-400 mt-0.5"></i>
-                                                                <span>{{ change.note }}</span>
-                                                            </div>
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4 text-medium text-gray-300">
+                                    {% if change.title %}
+                                        {{ change.title }}
+                                    {% else %}
+                                        <span class="text-gray-400">No additional details</span>
+                                    {% endif %}
+                                </td>     
+                                <td class="py-3 px-4">
+                                    {% if change.action == "change" %}
+                                        <span class="badge badge-blue"><i class="fas fa-exchange-alt mr-1"></i> Change</span>
+                                    {% elif change.action == "add" %}
+                                        <span class="badge badge-green"><i class="fas fa-plus mr-1"></i> Addition</span>
+                                    {% elif change.action == "remove" %}
+                                        <span class="badge badge-red"><i class="fas fa-minus mr-1"></i> Cancelled</span>
+                                    {% else %}
+                                        <span class="badge badge-gray"><i class="fas fa-question mr-1"></i> {{ change.action|default('Unknown') }}</span>
+                                    {% endif %}
+                                </td> 
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4">
+                                    <div class="card rounded-xl p-6 text-center bg-gray-800/50 border border-gray-700/50 shadow-xl">
+                                        <div class="flex flex-col items-center gap-4">
+                                            <div class="bg-indigo-500/10 p-5 rounded-full">
+                                                <i class="fas fa-calendar-check text-4xl text-indigo-400"></i>
                                             </div>
-                                        {% endfor %}
+                                            <div>
+                                                <h3 class="text-xl font-medium text-white mb-1">No substitutions today</h3>
+                                                <p class="text-gray-400">Your regular schedule is unchanged</p>
+                                            </div>
+                                            <a href="{{ url_for('dashboard') }}" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-lg text-white text-sm inline-flex items-center gap-2">
+                                                <i class="fas fa-calendar-day"></i>
+                                                <span>View Regular Timetable</span>
+                                            </a>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="card rounded-xl p-6 text-center bg-gray-800/50 border border-gray-700/50 shadow-xl">
-                <div class="flex flex-col items-center gap-4">
-                    <div class="bg-indigo-500/10 p-5 rounded-full">
-                        <i class="fas fa-calendar-check text-4xl text-indigo-400"></i>
+                        {% endif %}
+                        </tbody>
+                    </table>
                     </div>
-                    <div>
-                        <h3 class="text-xl font-medium text-white mb-1">No substitutions today</h3>
-                        <p class="text-gray-400">Your regular schedule is unchanged</p>
-                    </div>
-                    <a href="{{ url_for('get_timetable') }}" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-lg text-white text-sm inline-flex items-center gap-2">
-                        <i class="fas fa-calendar-day"></i>
-                        <span>View Regular Timetable</span>
-                    </a>
+                </div>
+                
+                <!-- Mobile view -->
+                <div class="mobile-cards sm:hidden block mt-4">
+                    {% if changes %}
+                        <div class="mobile-timetable">
+                            {% for change in changes %}
+                                <div class="mobile-period-card substitution-card type-{{ change.action }}">
+                                    <div class="mobile-period-header">
+                                        <div class="mobile-period-title-row">
+                                            <div class="mobile-period-number">
+                                                {% if change.lesson_n %}
+                                                    {{ change.lesson_n }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </div>
+                                                                                    
+                                        {% if change.action == "change" %}
+                                        <span class="badge badge-blue"> Change</span>
+                                    {% elif change.action == "add" %}
+                                        <span class="badge badge-green"> Addition</span>
+                                    {% elif change.action == "remove" %}
+                                        <span class="badge badge-red">Cancelled</span>
+                                    {% else %}
+                                        <span class="badge badge-gray"><i class="fas fa-question mr-1"></i> {{ change.action|default('Unknown') }}</span>
+                                    {% endif %}
+                                        </div>
+
+                                    </div>
+                                    
+                                    <div class="mobile-period-details">
+                                        {% if change.title %}
+                                            <div class="mobile-period-detail">
+                                                <i class="fas fa-info-circle"></i>
+                                                {{ change.title }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="mobile-empty-state">
+                            <div class="mobile-empty-state-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <p class="text-gray-400">No substitutions for this day</p>
+                            <a href="{{ url_for('dashboard') }}" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-lg text-white text-sm inline-flex items-center gap-2">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>View Regular Timetable</span>
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-        {% endif %}
+        </div>
     </div>
     
     <!-- AlpineJS Script -->

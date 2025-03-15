@@ -166,6 +166,10 @@ def dashboard():
                          show_tomorrow=show_tomorrow,
                          event_type_map=EVENT_TYPE_MAP,
                          event_type_icons=EVENT_TYPE_ICONS)
+class Action(str, Enum):
+    ADDITION = "add"
+    CHANGE = "change"
+    DELETION = "remove"
 
 @app.route('/substitutions/', defaults={'date_str': None})
 @app.route('/substitutions/<date_str>')
@@ -208,29 +212,31 @@ def get_timetable_changes(date_str):
             class_id = student_data._class_id
     
     # Get substitutions
+    # Get substitutions
     substitution = Substitution(edupage)
-    changes = substitution.get_timetable_changes(specific_date)
+    changes = substitution.get_timetable_changes(specific_date)  # Remove the Action parameter
 
     if changes is None: 
         changes = []
-
     # Get student's class name using get_classes method
     class_name = None
     if class_id:
-            classes = edupage.get_classes()
-    for class_obj in classes:
-        if hasattr(class_obj, 'class_id') and class_obj.class_id == class_id:
-            class_name = class_obj.short if hasattr(class_obj, 'short') else class_obj.name
+        classes = edupage.get_classes()
+        for class_obj in classes:
+            if hasattr(class_obj, 'class_id') and class_obj.class_id == class_id:
+                class_name = class_obj.short if hasattr(class_obj, 'short') else class_obj.name
 
     changes = [change for change in changes if change.change_class == class_name]
-
 
     return render_template('substitutions.html', 
                           changes=changes, 
                           student=student_data,   # Pass class name to template
                           current_date=specific_date, 
                           prev_date=prev_date, 
-                          next_date=next_date)
+                          next_date=next_date,
+                          CHANGE="change",
+                          ADDITION="add",
+                          DELETION="remove")
 
 @app.route('/lunches/', defaults={'date_str': None})
 @app.route('/lunches/<date_str>')
