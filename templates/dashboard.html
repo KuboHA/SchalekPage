@@ -1157,6 +1157,104 @@
             button.textContent = "Show more";
         }
     }
+
+    // Function to highlight current or next class based on time
+    function highlightCurrentOrNextClass() {
+        // Get current time
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+        
+        // Define class periods with start and end times
+        const classPeriods = {
+            1: { start: { hour: 8, minute: 0 }, end: { hour: 8, minute: 45 } },
+            2: { start: { hour: 8, minute: 55 }, end: { hour: 9, minute: 40 } },
+            3: { start: { hour: 9, minute: 50 }, end: { hour: 10, minute: 35 } },
+            4: { start: { hour: 10, minute: 55 }, end: { hour: 11, minute: 40 } },
+            5: { start: { hour: 11, minute: 50 }, end: { hour: 12, minute: 35 } },
+            6: { start: { hour: 12, minute: 45 }, end: { hour: 13, minute: 30 } },
+            7: { start: { hour: 13, minute: 40 }, end: { hour: 14, minute: 25 } },
+            8: { start: { hour: 14, minute: 35 }, end: { hour: 15, minute: 20 } },
+            9: { start: { hour: 15, minute: 30 }, end: { hour: 16, minute: 15 } }
+        };
+        
+        // First find if any class is currently ongoing
+        let currentPeriod = null;
+        let nextPeriod = null;
+        let earliestNextStart = Infinity;
+        
+        Object.entries(classPeriods).forEach(([period, times]) => {
+            const startTimeInMinutes = times.start.hour * 60 + times.start.minute;
+            const endTimeInMinutes = times.end.hour * 60 + times.end.minute;
+            
+            // Check if this period is happening now
+            if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes) {
+                currentPeriod = period;
+            }
+            
+            // Find the next upcoming period
+            if (startTimeInMinutes > currentTimeInMinutes && startTimeInMinutes < earliestNextStart) {
+                earliestNextStart = startTimeInMinutes;
+                nextPeriod = period;
+            }
+        });
+        
+        // Remove any existing highlights
+        document.querySelectorAll('.highlighted-class').forEach(el => {
+            el.classList.remove('highlighted-class');
+        });
+        
+        // Determine which period to highlight (current or next)
+        const periodToHighlight = currentPeriod || nextPeriod;
+        
+        if (periodToHighlight) {
+            // Highlight in desktop view
+            const desktopItems = document.querySelectorAll('.lg\\:col-span-3 .card.rounded-lg');
+            desktopItems.forEach(item => {
+                const periodElement = item.querySelector('.flex-shrink-0.w-6.h-6');
+                if (periodElement && periodElement.textContent.trim() === periodToHighlight) {
+                    item.classList.add('highlighted-class');
+                }
+            });
+            
+            // Highlight in mobile view
+            const mobileItems = document.querySelectorAll('.mobile-timetable-item');
+            mobileItems.forEach(item => {
+                const periodElement = item.querySelector('.mobile-period-number');
+                if (periodElement && periodElement.textContent.trim() === periodToHighlight) {
+                    item.classList.add('highlighted-class');
+                }
+            });
+        }
+    }
+
+    // Add the CSS rules for highlighted class
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+        .highlighted-class {
+            position: relative;
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.05)) !important;
+            border-left: 3px solid #6366f1 !important;
+            transform: translateX(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Mobile-specific styles */
+        .mobile-timetable-item.highlighted-class {
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.05)) !important;
+            border-left: 3px solid #6366f1 !important;
+        }
+    `;
+    document.head.appendChild(styleElement);
+
+    // Run highlight function when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        highlightCurrentOrNextClass();
+        
+        // Update the highlight every minute
+        setInterval(highlightCurrentOrNextClass, 60000);
+    });
 </script>
 </body>
 </html>

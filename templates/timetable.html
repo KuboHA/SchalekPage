@@ -553,6 +553,68 @@
         }
     }
 </style>
+<script src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js" defer></script>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        // Register the pageTransition function globally for Alpine
+        Alpine.data('pageTransition', () => ({
+            isLoading: true,
+            
+            navigateTo(url) {
+                this.isLoading = true;
+                window.location.href = url;
+            },
+            
+            init() {
+                // Force loading state to false after initialization
+                setTimeout(() => {
+                    this.isLoading = false;
+                    console.log('Alpine initialized, loading state set to false');
+                    
+                    // Apply row indices for animation
+                    document.querySelectorAll('.timetable-row').forEach((row, index) => {
+                        row.style.setProperty('--row-index', index);
+                    });
+                }, 300);
+                
+                // Fallback in case timeout doesn't work
+                setTimeout(() => {
+                    this.isLoading = false;
+                    console.log('Fallback timeout triggered');
+                }, 2000);
+                
+                // Handle page show events (like back button)
+                window.addEventListener('pageshow', () => {
+                    this.isLoading = false;
+                    console.log('Pageshow event triggered');
+                });
+            }
+        }));
+    });
+    
+    // Additional fallback that doesn't depend on Alpine
+    window.addEventListener('load', function() {
+        console.log('Window loaded');
+        setTimeout(() => {
+            // Find loading elements and manually hide them
+            const loaders = document.querySelectorAll('[x-show="isLoading"]');
+            loaders.forEach(loader => {
+                console.log('Manually hiding loader element');
+                loader.style.display = 'none';
+            });
+        }, 1500);
+    });
+
+    // Extra failsafe for older browsers
+    setTimeout(() => {
+        const loaders = document.querySelectorAll('[x-show="isLoading"]');
+        loaders.forEach(loader => {
+            loader.style.display = 'none';
+        });
+        console.log('Emergency timeout triggered to hide loaders');
+    }, 3000);
+</script>
 </head>
 <body class="min-h-screen text-gray-900 bg-gray-900 text-gray-100" x-data="pageTransition()" x-init="init()">
     <div 
@@ -811,22 +873,44 @@
                 },
                 
                 init() {
+                    // Make sure loading state turns off after a short delay
                     setTimeout(() => {
+                        console.log("Setting isLoading to false");
                         this.isLoading = false;
                         
                         document.querySelectorAll('.timetable-row').forEach((row, index) => {
                             row.style.setProperty('--row-index', index);
                         });
-                    }, 150);
+                    }, 300);
                     
-                    window.addEventListener('pageshow', (event) => {
-                        if (event.persisted) {
+                    // Add a fallback in case the timeout doesn't work
+                    setTimeout(() => {
+                        if (this.isLoading) {
+                            console.log("Forcing isLoading to false after timeout");
                             this.isLoading = false;
                         }
+                    }, 2000);
+                    
+                    // Handle browser back button behavior
+                    window.addEventListener('pageshow', (event) => {
+                        console.log("pageshow event triggered");
+                        this.isLoading = false;
                     });
                 }
             };
         }
+        
+        // Add a global fallback to ensure the spinner is hidden if Alpine fails
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM fully loaded");
+            setTimeout(() => {
+                const loader = document.querySelector('[x-show="isLoading"]');
+                if (loader && !loader.hasAttribute('x-cloak')) {
+                    console.log("Manually hiding loader");
+                    loader.style.display = 'none';
+                }
+            }, 3000);
+        });
     </script>
 </body>
 </html>
