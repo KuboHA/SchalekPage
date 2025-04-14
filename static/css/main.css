@@ -13,6 +13,14 @@
   --text-primary: #f3f4f6;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
+  --bg-color: #0f172a; /* Adding solid background color for consistency */
+}
+
+/* Add styles for HTML element to ensure full coverage */
+html {
+  background-color: var(--bg-color);
+  height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -23,6 +31,7 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--text-primary);
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .card {
@@ -180,6 +189,29 @@ button[id^="btn-"] {
   
   .mobile-order-first {
     order: -1 !important;
+  }
+
+  /* Fix for mobile browsers that show white space beyond page boundaries */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    background: var(--bg-color);
+    z-index: -1;
+  }
+  
+  body::before {
+    top: -100vh;
+    left: 0;
+    right: 0;
+    height: 100vh;
+  }
+  
+  body::after {
+    bottom: -100vh;
+    left: 0;
+    right: 0;
+    height: 100vh;
   }
 }
 

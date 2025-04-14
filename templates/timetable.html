@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SchalekPage</title>
+    <!-- Add critical x-cloak style before any other styles -->
     <style>
+        [x-cloak] { display: none !important; }
+        
         html, body {
             background-color: #111827;
             color: #f3f4f6;
@@ -18,6 +21,11 @@
         
         .loader {
             animation: spin 1s linear infinite;
+        }
+
+        /* Fallback style to hide loader */
+        .hidden-loader {
+            display: none !important;
         }
     </style>
     <link rel="stylesheet" href="../static/css/style.css">
@@ -559,7 +567,7 @@
     document.addEventListener('alpine:init', () => {
         // Register the pageTransition function globally for Alpine
         Alpine.data('pageTransition', () => ({
-            isLoading: true,
+            isLoading: false,  // Start with false to prevent flash
             
             navigateTo(url) {
                 this.isLoading = true;
@@ -568,25 +576,21 @@
             
             init() {
                 // Force loading state to false after initialization
-                setTimeout(() => {
-                    this.isLoading = false;
-                    console.log('Alpine initialized, loading state set to false');
-                    
-                    // Apply row indices for animation
-                    document.querySelectorAll('.timetable-row').forEach((row, index) => {
-                        row.style.setProperty('--row-index', index);
-                    });
-                }, 300);
+                this.isLoading = false;
+                console.log('Alpine initialized, loading state set to false');
                 
-                // Fallback in case timeout doesn't work
-                setTimeout(() => {
-                    this.isLoading = false;
-                    console.log('Fallback timeout triggered');
-                }, 2000);
+                // Apply row indices for animation
+                document.querySelectorAll('.timetable-row').forEach((row, index) => {
+                    row.style.setProperty('--row-index', index);
+                });
+                
+                // Hide loading element manually as a failsafe
+                document.getElementById('loading-spinner').classList.add('hidden-loader');
                 
                 // Handle page show events (like back button)
                 window.addEventListener('pageshow', () => {
                     this.isLoading = false;
+                    document.getElementById('loading-spinner').classList.add('hidden-loader');
                     console.log('Pageshow event triggered');
                 });
             }
@@ -596,28 +600,34 @@
     // Additional fallback that doesn't depend on Alpine
     window.addEventListener('load', function() {
         console.log('Window loaded');
-        setTimeout(() => {
-            // Find loading elements and manually hide them
-            const loaders = document.querySelectorAll('[x-show="isLoading"]');
-            loaders.forEach(loader => {
-                console.log('Manually hiding loader element');
-                loader.style.display = 'none';
-            });
-        }, 1500);
+        // Find loading elements and manually hide them
+        document.getElementById('loading-spinner').classList.add('hidden-loader');
+        
+        const loaders = document.querySelectorAll('[x-show="isLoading"]');
+        loaders.forEach(loader => {
+            console.log('Manually hiding loader element');
+            loader.classList.add('hidden-loader');
+        });
     });
 
     // Extra failsafe for older browsers
     setTimeout(() => {
+        if (document.getElementById('loading-spinner')) {
+            document.getElementById('loading-spinner').classList.add('hidden-loader');
+        }
+        
         const loaders = document.querySelectorAll('[x-show="isLoading"]');
         loaders.forEach(loader => {
-            loader.style.display = 'none';
+            loader.classList.add('hidden-loader');
         });
         console.log('Emergency timeout triggered to hide loaders');
-    }, 3000);
+    }, 1000);
 </script>
 </head>
 <body class="min-h-screen text-gray-900 bg-gray-900 text-gray-100" x-data="pageTransition()" x-init="init()">
+    <!-- Replace the loader div with improved version -->
     <div 
+        id="loading-spinner"
         x-show="isLoading" 
         x-cloak
         class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center"
@@ -861,7 +871,7 @@
     <script>
         function pageTransition() {
             return {
-                isLoading: true,
+                isLoading: false,
                 
                 navigateTo(url) {
                     this.isLoading = true;
@@ -873,28 +883,29 @@
                 },
                 
                 init() {
-                    // Make sure loading state turns off after a short delay
-                    setTimeout(() => {
-                        console.log("Setting isLoading to false");
-                        this.isLoading = false;
-                        
-                        document.querySelectorAll('.timetable-row').forEach((row, index) => {
-                            row.style.setProperty('--row-index', index);
-                        });
-                    }, 300);
+                    // Make sure loading state turns off immediately
+                    this.isLoading = false;
                     
-                    // Add a fallback in case the timeout doesn't work
-                    setTimeout(() => {
-                        if (this.isLoading) {
-                            console.log("Forcing isLoading to false after timeout");
-                            this.isLoading = false;
-                        }
-                    }, 2000);
+                    // Manually hide the loader
+                    const loader = document.getElementById('loading-spinner');
+                    if (loader) {
+                        loader.classList.add('hidden-loader');
+                    }
+                    
+                    document.querySelectorAll('.timetable-row').forEach((row, index) => {
+                        row.style.setProperty('--row-index', index);
+                    });
                     
                     // Handle browser back button behavior
                     window.addEventListener('pageshow', (event) => {
                         console.log("pageshow event triggered");
                         this.isLoading = false;
+                        
+                        // Manually hide the loader again
+                        const loader = document.getElementById('loading-spinner');
+                        if (loader) {
+                            loader.classList.add('hidden-loader');
+                        }
                     });
                 }
             };
@@ -903,13 +914,18 @@
         // Add a global fallback to ensure the spinner is hidden if Alpine fails
         document.addEventListener('DOMContentLoaded', function() {
             console.log("DOM fully loaded");
-            setTimeout(() => {
-                const loader = document.querySelector('[x-show="isLoading"]');
-                if (loader && !loader.hasAttribute('x-cloak')) {
-                    console.log("Manually hiding loader");
-                    loader.style.display = 'none';
-                }
-            }, 3000);
+            const loader = document.getElementById('loading-spinner');
+            if (loader) {
+                loader.classList.add('hidden-loader');
+            }
+        });
+        
+        // One more emergency backup
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('loading-spinner');
+            if (loader) {
+                loader.classList.add('hidden-loader');
+            }
         });
     </script>
 </body>
