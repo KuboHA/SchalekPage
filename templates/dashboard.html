@@ -1004,9 +1004,12 @@
                             {% for class in timetable %}
                                 <li class="card rounded-lg p-2 hover:bg-gray-800/50 transition-colors duration-200">
                                     <div class="flex gap-2">
+                                        {% if class.period %}
                                         <div class="flex-shrink-0 w-6 h-6 rounded bg-indigo-500/20 
                                                     flex items-center justify-center text-indigo-400 font-medium text-sm">
-                                            {{ class.period }}
+                                        {% else %}
+                                        <div class="flex-shrink-0 w-6 h-6 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-medium text-sm">
+                                        <i class="fas fa-xmark">
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <!-- First row: Subject and Classroom -->
