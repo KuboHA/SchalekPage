@@ -1,10 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import json
 from edupage_api import Edupage
-from edupage_api.substitution import Substitution, TimetableChange
 from datetime import datetime, date, timedelta
 from typing import Optional, Union
 from enum import Enum
-from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = '738-531-827'
@@ -110,6 +109,8 @@ def dashboard():
         student_data = next((student for student in students if student.name == session['username']), None)
     
     notifications = edupage.get_notifications()
+    # Base URL for attachment prefixing
+    base_url = f"https://{session.get('subdomain')}.edupage.org" if session.get('subdomain') else None
     
     today = date.today()
     
@@ -125,8 +126,165 @@ def dashboard():
 
     timetable = edupage.get_my_timetable(target_date)
 
-    for notification in notifications:
-        notification.formatted_timestamp = time_since_posted(notification.timestamp)
+    # --- Notifications enrichment (grouping, attachments, confirmations) ---
+    def _extract_confirm_count(data):
+        if data is None:
+            return 0
+        count = 0
+        # Direct numeric
+        if isinstance(data, (int, float)):
+            return int(data)
+        if isinstance(data, (list, tuple, set)):
+            return len(data)
+        if isinstance(data, dict):
+            # direct keys
+            key_candidates = [k for k in data.keys() if any(x in k.lower() for x in ['confirm', 'like', 'thumb'])]
+            for k in key_candidates:
+                sub = data.get(k)
+                sub_count = _extract_confirm_count(sub)
+                if sub_count > count:
+                    count = sub_count
+            # common pattern inside dict: count field + users
+            if 'count' in data and isinstance(data.get('count'), (int, float)):
+                count = max(count, int(data.get('count')))  # prefer explicit
+            return count
+        # Fallback
+        return 0
+
+    id_map = {}
+    for n in notifications:
+        n.formatted_timestamp = time_since_posted(n.timestamp)
+        n.replies = []
+        n.attachments = []
+        n.confirmation_count = 0
+        add_data = getattr(n, 'additional_data', None)
+        # Parse additional data JSON string if needed
+        if isinstance(add_data, str):
+            try:
+                add_data = json.loads(add_data)
+            except Exception:
+                add_data = None
+        # Confirmation count (recursive heuristic)
+        n.confirmation_count = _extract_confirm_count(add_data)
+        # Attachment extraction
+        if isinstance(add_data, dict):
+            def _record_attachment(att_name, att_url):
+                if not att_url:
+                    return
+                if base_url and not att_url.lower().startswith(('http://', 'https://')):
+                    if not att_url.startswith('/'):
+                        att_url_local = '/' + att_url
+                    else:
+                        att_url_local = att_url
+                    att_url_full = base_url.rstrip('/') + att_url_local
+                else:
+                    att_url_full = att_url
+                lower_name = (att_name or '').lower()
+                is_image = lower_name.endswith('.jpg') or lower_name.endswith('.jpeg')
+                # Avoid duplicates
+                if all(a['url'] != att_url_full for a in n.attachments):
+                    n.attachments.append({'name': att_name or 'attachment', 'url': att_url_full, 'is_image': is_image})
+
+            attachment_keys = ['attachments','files','prilohy','docs']
+            for akey in attachment_keys:
+                if akey in add_data:
+                    raw_list = add_data.get(akey)
+                    # List/Tuple style
+                    if isinstance(raw_list, (list, tuple)):
+                        for item in raw_list:
+                            att_name = 'attachment'
+                            att_url = None
+                            if isinstance(item, dict):
+                                att_name = item.get('name') or item.get('filename') or item.get('title') or 'attachment'
+                                att_url = item.get('url') or item.get('link') or item.get('downloadUrl') or item.get('href')
+                            elif isinstance(item, str):
+                                att_url = item
+                                att_name = item.split('/')[-1]
+                            _record_attachment(att_name, att_url)
+                    # Dict style (mapping path->filename or meta objects)
+                    elif isinstance(raw_list, dict):
+                        for k2, v2 in raw_list.items():
+                            if isinstance(v2, dict):
+                                att_name = v2.get('name') or v2.get('filename') or v2.get('title') or v2.get('file') or 'attachment'
+                                att_url = v2.get('url') or v2.get('link') or v2.get('downloadUrl') or v2.get('href') or k2
+                            else:
+                                att_name = str(v2) if isinstance(v2, str) else k2.split('/')[-1]
+                                att_url = k2 if isinstance(k2, str) else None
+                            _record_attachment(att_name, att_url)
+                    break
+
+            # Recursive scan for '/elearning/' style entries
+            def _scan(obj):
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        if isinstance(k, str):
+                            if '/elearning/' in k or k.startswith('/elearning') or k.startswith('elearning/'):
+                                # k is path; v maybe filename
+                                filename = v.strip() if isinstance(v, str) and v.strip() else k.split('/')[-1]
+                                _record_attachment(filename, k)
+                            if isinstance(v, str) and ('/elearning/' in v or v.startswith('/elearning') or v.startswith('elearning/')):
+                                # v is path; k might be filename
+                                filename = k.split('/')[-1]
+                                _record_attachment(filename, v)
+                        _scan(v)
+                elif isinstance(obj, (list, tuple)):
+                    for item in obj:
+                        _scan(item)
+            _scan(add_data)
+        event_id = getattr(n, 'event_id', None)
+        if event_id is None:
+            event_id = id(n)
+        id_map[event_id] = n
+
+    # Threading using explicit parent keys or ID prefix heuristic
+    parent_keys = ['parent_id','parentId','reply_to','replyTo','parentTimelineId','timeline_parent_id']
+    # Build string IDs for heuristic
+    event_id_strings = {eid: str(eid) for eid in id_map.keys()}
+
+    def _guess_parent_by_prefix(eid):
+        s = event_id_strings.get(eid)
+        if not s:
+            return None
+        # Try shorter prefixes (length 4 or 5) as parent candidates
+        for plen in (4,5):
+            if len(s) > plen:
+                prefix = s[:plen]
+                # exact parent id exists?
+                try:
+                    pid = int(prefix)
+                except ValueError:
+                    continue
+                if pid in id_map and pid != eid:
+                    return pid
+        return None
+
+    main_notifications = []
+    for eid, n in list(id_map.items()):
+        add_data = getattr(n, 'additional_data', None)
+        if isinstance(add_data, str):
+            try:
+                add_data = json.loads(add_data)
+            except Exception:
+                add_data = None
+        parent_id = None
+        if isinstance(add_data, dict):
+            for pk in parent_keys:
+                if pk in add_data and add_data.get(pk):
+                    parent_id = add_data.get(pk)
+                    if isinstance(parent_id, str) and parent_id.isdigit():
+                        parent_id = int(parent_id)
+                    break
+        if not parent_id:
+            parent_id = _guess_parent_by_prefix(eid)
+        if parent_id and parent_id in id_map and parent_id != eid:
+            id_map[parent_id].replies.append(n)
+        else:
+            main_notifications.append(n)
+
+    main_notifications.sort(key=lambda x: x.timestamp, reverse=True)
+    for n in main_notifications:
+        n.replies.sort(key=lambda x: x.timestamp)
+    notifications = main_notifications
     
     now = datetime.now()
     cutoff_time = now.replace(hour=14, minute=30, second=0, microsecond=0)
@@ -166,10 +324,13 @@ def dashboard():
                          show_tomorrow=show_tomorrow,
                          event_type_map=EVENT_TYPE_MAP,
                          event_type_icons=EVENT_TYPE_ICONS)
-class Action(str, Enum):
-    ADDITION = "add"
-    CHANGE = "change"
-    DELETION = "remove"
+    # NOTE FOR TEMPLATE: Each attachment dict now contains keys: name, url, is_image (bool for .jpg/.jpeg)
+"""NOTE: Removed local Action enum duplicate.
+The edupage_api.substitution module already defines Action(str, Enum).
+Keeping a duplicate here risks confusion when comparing enum instances in templates.
+Templates compare against raw string values (e.g. "change"), so we'll normalize
+the action to its primitive string value before rendering.
+"""
 
 @app.route('/substitutions/', defaults={'date_str': None})
 @app.route('/substitutions/<date_str>')
@@ -211,32 +372,67 @@ def get_timetable_changes(date_str):
         elif hasattr(student_data, '_class_id'):
             class_id = student_data._class_id
     
-    # Get substitutions
-    # Get substitutions
-    substitution = Substitution(edupage)
-    changes = substitution.get_timetable_changes(specific_date)  # Remove the Action parameter
+    # Retrieve substitution changes safely
+    try:
+        substitution_module = edupage.substitution()
+        raw_changes = substitution_module.get_timetable_changes(specific_date) or []
+    except Exception as e:
+        print(f"Error fetching substitution data: {e}")
+        raw_changes = []
 
-    if changes is None: 
-        changes = []
-    # Get student's class name using get_classes method
+    # Resolve student's class name (short preferred)
     class_name = None
     if class_id:
-        classes = edupage.get_classes()
-        for class_obj in classes:
-            if hasattr(class_obj, 'class_id') and class_obj.class_id == class_id:
-                class_name = class_obj.short if hasattr(class_obj, 'short') else class_obj.name
+        try:
+            for class_obj in edupage.get_classes():
+                if getattr(class_obj, 'class_id', None) == class_id:
+                    class_name = getattr(class_obj, 'short', None) or getattr(class_obj, 'name', None)
+                    break
+        except Exception as e:
+            print(f"Error resolving class name: {e}")
 
-    changes = [change for change in changes if change.change_class == class_name]
+    # Normalize changes for template (avoid direct dependency on library internals)
+    normalized_changes = []
+    for ch in raw_changes:
+        # Filter by student class if we have one
+        if class_name and getattr(ch, 'change_class', None) != class_name:
+            continue
 
-    return render_template('substitutions.html', 
-                          changes=changes, 
-                          student=student_data,   # Pass class name to template
-                          current_date=specific_date, 
-                          prev_date=prev_date, 
-                          next_date=next_date,
-                          CHANGE="change",
-                          ADDITION="add",
-                          DELETION="remove")
+        # Extract/normalize lesson number (may be int or tuple range)
+        lesson_n = getattr(ch, 'lesson_n', None)
+        if isinstance(lesson_n, tuple):
+            lesson_display = f"{lesson_n[0]}-{lesson_n[1]}"
+        else:
+            lesson_display = lesson_n
+
+        # Normalize action (enum or primitive)
+        action_val = getattr(ch, 'action', None)
+        # Action may be enum subclass of str or plain str
+        if hasattr(action_val, 'value'):
+            action_val = action_val.value
+        # Some libraries might return tuple in action (per docs union) — stringify if so
+        if isinstance(action_val, tuple):
+            action_val = '-'.join(map(str, action_val))
+
+        normalized_changes.append({
+            'change_class': getattr(ch, 'change_class', None),
+            'lesson_n': lesson_display,
+            'title': getattr(ch, 'title', None),
+            'action': action_val
+        })
+
+    return render_template(
+        'substitutions.html',
+        changes=normalized_changes,
+        student=student_data,
+        student_class=class_name,  # provide for badge in template
+        current_date=specific_date,
+        prev_date=prev_date,
+        next_date=next_date,
+        CHANGE="change",  # keep legacy constants for template compatibility
+        ADDITION="add",
+        DELETION="remove"
+    )
 
 @app.route('/lunches/', defaults={'date_str': None})
 @app.route('/lunches/<date_str>')
