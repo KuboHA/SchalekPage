@@ -1,5 +1,7 @@
 # SchalekPage
 
+> **Status:** Early alpha. This repository is a work-in-progress prototype and does not represent the final product.
+
 SchalekPage is a Flask-based web dashboard that integrates with the EduPage platform to provide students with a consolidated view of their school life. It surfaces notifications, timetable information, meal plans, substitution changes, and more—wrapped in a modern UI with rich attachment previews and threaded conversations.
 
 ## ✨ Features
