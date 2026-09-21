@@ -27,7 +27,7 @@ SchalekPage/
 │   └── web/             # HTTP handlers, session store, view models
 │       ├── templates/   # html/template views (embedded)
 │       └── static/css/  # stylesheets (embedded)
-└── app.py               # legacy Flask implementation, superseded
+└── build.sh             # build, test, check and cross-compile
 ```
 
 The EduPage client is a port of the Python [edupage-api](https://github.com/EdupageAPI/edupage-api) reference implementation.
@@ -49,14 +49,33 @@ No database, cache or external service is required.
 
 2. **Build**
    ```bash
-   go build ./cmd/schalekpage
+   ./build.sh
    ```
+   This writes a `./schalekpage` binary stamped with the current git version.
+
+### Build script
+
+| Command | Does |
+| --- | --- |
+| `./build.sh` or `./build.sh build` | compile for the host platform |
+| `./build.sh run -addr :8080` | build, then run with the given arguments |
+| `./build.sh test` | run the test suite |
+| `./build.sh check` | gofmt + `go vet` + tests — what CI should run |
+| `./build.sh fmt` | rewrite sources with gofmt |
+| `./build.sh dist` | cross-compile static release binaries into `dist/` |
+| `./build.sh clean` | remove build output |
+
+`dist` builds Linux, macOS and Windows binaries for amd64 and arm64 with
+`CGO_ENABLED=0`, so each one is fully static and needs no libc at runtime.
+
+Plain `go build ./cmd/schalekpage` works too; you only lose the version stamp.
 
 ## ▶️ Running the App
 
 ```bash
 ./schalekpage            # listens on :5000
 ./schalekpage -addr :8080
+./schalekpage -version
 ```
 
 Open the printed URL in your browser and log in with your EduPage credentials.
@@ -82,7 +101,9 @@ If your EduPage account uses 2FA, you are redirected to `/two_factor` to supply 
 
 ## 🔀 Differences from the Python version
 
-The port is faithful to `app.py` and to the [edupage-api](https://github.com/EdupageAPI/edupage-api) reference except where that behaviour was plainly broken. The deliberate divergences:
+The Flask implementation (`app.py`, plus its Jinja2 templates) has been removed; it remains in git history if you need to compare. Source comments still refer to `app.py` where they explain why a piece of code behaves as it does.
+
+The port is faithful to it and to the [edupage-api](https://github.com/EdupageAPI/edupage-api) reference except where that behaviour was plainly broken. The deliberate divergences:
 
 - **Sessions are server-side** (see Security Notes above) instead of a plaintext password in a client-side cookie.
 - **Grades averages** are computed in Go before rendering. The Jinja template referenced `total_avg` before it was ever `{% set %}`, which raises `UndefinedError` on any non-empty grade list.
@@ -98,7 +119,8 @@ The request-compression envelope was verified against the Python implementation:
 ## 🧪 Testing
 
 ```bash
-go test ./...
+./build.sh check     # gofmt + go vet + tests
+./build.sh test      # tests only
 ```
 
 The suite covers the offline logic: the request compression envelope, the login-payload parsing, the defensive JSON helpers, response parsing for each data module, the session store lifecycle, date handling and the 14:30 rollover, and that every template parses.

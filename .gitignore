@@ -1,14 +1,7 @@
-# Go build output
+# Build output
 /schalekpage
 /dist/
+
+# Test and profiling output
 *.test
 *.out
-
-# Legacy Python
-__pycache__/
-*.py[cod]
-.venv/
-
-*.json
-tailwind.config.js
-node_modules/

@@ -16,6 +16,10 @@ import (
 	"github.com/KuboHA/SchalekPage/internal/web"
 )
 
+// version is the build version, stamped by the build script via
+// -ldflags "-X main.version=...". It is "dev" for an unstamped `go build`.
+var version = "dev"
+
 func main() {
 	if err := run(); err != nil {
 		slog.Error("schalekpage exited with error", "error", err)
@@ -25,7 +29,13 @@ func main() {
 
 func run() error {
 	addr := flag.String("addr", ":5000", "address to listen on")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("schalekpage", version)
+		return nil
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
