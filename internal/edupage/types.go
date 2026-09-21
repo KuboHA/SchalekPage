@@ -57,6 +57,16 @@ type TimelineEvent struct {
 	RecipientName  string
 	EventType      string
 	AdditionalData map[string]any
+
+	// The fields below are derived from the timeline's per-user state map
+	// (`userProps` in the login payload, `timelineUserProps` in a history
+	// response). They are zero when no state has been recorded for the event.
+	IsDone        bool
+	DoneAt        *time.Time
+	IsStarred     bool
+	ReactionCount int
+	CreatedAt     *time.Time
+	IsRemoved     bool
 }
 
 // Lesson is a single lesson in a timetable.
@@ -69,6 +79,20 @@ type Lesson struct {
 	Teachers     []Teacher
 	OnlineLesson string
 	Curriculum   string
+	Groups       []string
+	// IsCancelled marks a lesson EduPage has removed or flagged absent; such
+	// lessons must not render as if they were taking place.
+	IsCancelled bool
+	// IsEvent marks a calendar entry (trip, meeting, ...) rather than a lesson.
+	IsEvent bool
+}
+
+// Duration returns how long the lesson lasts.
+func (l Lesson) Duration() time.Duration {
+	if l.StartTime.IsZero() || l.EndTime.IsZero() {
+		return 0
+	}
+	return l.EndTime.Sub(l.StartTime)
 }
 
 // Timetable is a day's worth of lessons.
@@ -84,6 +108,13 @@ type Menu struct {
 	Weight    string
 	Number    string
 	Rating    *MealRating
+	// Label is EduPage's display name for the menu ("Menu A").
+	Label string
+	// Choosable is false for a menu the canteen lists but does not allow
+	// this diner to pick.
+	Choosable bool
+	// OrderIndex is the key ("1", "2", ...) the ordering call expects.
+	OrderIndex string
 }
 
 // MealRating is the user's rating of a served meal.
@@ -106,6 +137,15 @@ type Meal struct {
 	Title        string
 	MenuID       string
 	Date         time.Time
+
+	// BoarderID ("stravnikid") identifies the diner whose order is being
+	// changed; it is required by every canteen write call.
+	BoarderID string
+	// CanBeChangedUntil is the deadline after which the order is frozen. It is
+	// nil when EduPage published no deadline for the meal.
+	CanBeChangedUntil *time.Time
+	// MealIndex is "1" (snack), "2" (lunch) or "3" (afternoon snack).
+	MealIndex string
 }
 
 // Meals holds all meals for a single day.

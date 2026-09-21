@@ -73,3 +73,26 @@ func TestParseSubstitutionHTML_NoSections(t *testing.T) {
 		t.Errorf("expected nil, got %#v", got)
 	}
 }
+
+// TestSubstitutionHTML_ReloadDetection exercises the same reload-detection
+// helper substitutionHTML relies on (via Client.withSessionRecovery), since
+// the endpoint itself can't be hit without a live EduPage session. See
+// TestRetryOnReload_* in client_test.go for the retry-count/give-up
+// behavior this builds on.
+func TestSubstitutionHTML_ReloadDetection(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"normal substitution payload", `{"r":"<div>...</div>"}`, false},
+		{"stale session", `{"reload":true}`, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := hasReloadKey([]byte(tc.body)); got != tc.want {
+				t.Errorf("hasReloadKey(%q) = %v, want %v", tc.body, got, tc.want)
+			}
+		})
+	}
+}

@@ -25,33 +25,36 @@ func (c *Client) TimetableChanges(day time.Time) ([]TimetableChange, error) {
 
 // substitutionHTML fetches the raw substitution-viewer HTML fragment for
 // day, mirroring Substitution.__get_substitution_data from the Python
-// reference.
+// reference. When EduPage reports its gsecHash as stale (a "reload" key in
+// place of real data), it transparently refreshes the session and retries
+// once — see Client.withSessionRecovery.
 func (c *Client) substitutionHTML(day time.Time) (string, error) {
-	payload := map[string]any{
-		"__args": []any{
-			nil,
-			map[string]string{
-				"date": day.Format(eduDateLayout),
-				"mode": "classes",
+	fetch := func() ([]byte, error) {
+		payload := map[string]any{
+			"__args": []any{
+				nil,
+				map[string]string{
+					"date": day.Format(eduDateLayout),
+					"mode": "classes",
+				},
 			},
-		},
-		"__gsh": c.GsecHash(),
+			// Read fresh on every call: a retry after Restore() must send
+			// the just-refreshed hash, not the one captured before it.
+			"__gsh": c.GsecHash(),
+		}
+		return c.PostJSON("/substitution/server/viewer.js?__func=getSubstViewerDayDataHtml", payload)
 	}
 
-	body, err := c.PostJSON("/substitution/server/viewer.js?__func=getSubstViewerDayDataHtml", payload)
+	body, err := c.withSessionRecovery(fetch, hasReloadKey)
 	if err != nil {
 		return "", fmt.Errorf("edupage: fetch substitutions: %w", err)
 	}
 
 	var resp struct {
-		R      string `json:"r"`
-		Reload bool   `json:"reload"`
+		R string `json:"r"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return "", fmt.Errorf("edupage: decode substitutions response: %w", err)
-	}
-	if resp.Reload {
-		return "", fmt.Errorf("edupage: substitutions: session expired, log in again")
 	}
 
 	return resp.R, nil

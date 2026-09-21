@@ -10,11 +10,19 @@ import (
 // loginPageData is the view model for login.html.
 type loginPageData struct {
 	Error string
+
+	// OAuthRequestID carries a pending MCP OAuth authorize request (see
+	// oauth.go) through the login form as a hidden field, so a successful
+	// login can complete the redirect back to the MCP client.
+	OAuthRequestID string
 }
 
-// handleIndex serves the login page (GET /), matching app.py's index().
+// handleIndex serves the login page (GET /), matching app.py's index(). It
+// also carries through the "oauth" query param, set by
+// handleOAuthAuthorize when an MCP client's authorization request needs the
+// user to sign in first.
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, "login.html", loginPageData{})
+	s.render(w, r, "login.html", loginPageData{OAuthRequestID: r.URL.Query().Get("oauth")})
 }
 
 // handleLogin authenticates against EduPage (POST /login). On success it
@@ -23,6 +31,10 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 // kept it in the (client-side, signed-but-readable) Flask session cookie
 // and re-logged in on every single request.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if !s.loginRate.Allow(clientIP(r)) {
+		s.renderStatus(w, r, "login.html", loginPageData{Error: "Too many login attempts. Please wait a few minutes and try again."}, http.StatusTooManyRequests)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		s.render(w, r, "login.html", loginPageData{Error: "Invalid form submission."})
 		return
@@ -30,11 +42,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	subdomain := r.FormValue("subdomain")
+	oauthRequestID := r.FormValue("oauth")
 
 	client := edupage.New(clientTimeout)
 	tf, err := client.Login(username, password, subdomain)
 	if err != nil {
-		s.render(w, r, "login.html", loginPageData{Error: describeLoginError(err)})
+		s.render(w, r, "login.html", loginPageData{Error: describeLoginError(err), OAuthRequestID: oauthRequestID})
 		return
 	}
 
@@ -48,6 +61,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	sess.Username = username
 	sess.Subdomain = subdomain
 	sess.StudentName = username // fallback, overridden below on a match
+	sess.OAuthRequestID = oauthRequestID
 
 	if students, err := client.Students(); err != nil {
 		s.logger.Warn("fetch students at login failed", "error", err)
@@ -62,6 +76,24 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		sess.Pending = tf
 		http.Redirect(w, r, "/two_factor", http.StatusSeeOther)
 		return
+	}
+	s.finishLoginRedirect(w, r, sess)
+}
+
+// finishLoginRedirect sends the browser wherever it needs to go once a
+// session has finished authenticating (2FA included, if any): back to the
+// pending MCP OAuth client if this login started there, otherwise to the
+// dashboard as usual.
+func (s *Server) finishLoginRedirect(w http.ResponseWriter, r *http.Request, sess *Session) {
+	if sess.OAuthRequestID != "" {
+		reqID := sess.OAuthRequestID
+		sess.OAuthRequestID = ""
+		if req, ok := s.oauth.takeAuthRequest(reqID); ok {
+			s.finishOAuthAuthorize(w, r, req, sess)
+			return
+		}
+		// Pending request expired or was already used; fall through to the
+		// normal dashboard redirect rather than stranding the user.
 	}
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
@@ -81,6 +113,17 @@ func describeLoginError(err error) string {
 	default:
 		return err.Error()
 	}
+}
+
+// handleLogout signs the caller out (POST /logout): it destroys the
+// server-side session — so the live *edupage.Client and any pending 2FA
+// state are dropped — then clears the session cookie and sends the browser
+// back to the login page. Routed as POST-only (never a GET link) so an
+// embedded image or prefetch can't trigger it.
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request, sess *Session) {
+	s.sessions.Delete(sess.ID)
+	clearSessionCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // twoFactorPageData is the view model for two_factor.html.
@@ -126,5 +169,5 @@ func (s *Server) handleTwoFactorPost(w http.ResponseWriter, r *http.Request) {
 		sess.StudentID = student.PersonID
 	}
 
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	s.finishLoginRedirect(w, r, sess)
 }

@@ -1,0 +1,153 @@
+{{- /*
+  Shared chrome for every page. Kept in one file so the theme switcher, the
+  font/stylesheet links and the navbar can't drift apart across templates.
+
+  "swisshead" takes the page title as its data (a plain string), everything
+  else either takes the page's view model (it only reads .Student) or no data
+  at all.
+*/ -}}
+
+{{define "swisshead"}}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SchalekPage">
+    <title>{{.}} — SchalekPage</title>
+    {{/* Applied before first paint so the page never flashes the wrong theme. */}}
+    <script>
+        (function () {
+            var t;
+            try { t = localStorage.getItem("sp-theme"); } catch (e) { /* private mode */ }
+            if (t !== "light" && t !== "dark") {
+                t = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+            }
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="icon" href="/static/favicon.ico" sizes="any">
+    <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+{{end}}
+
+{{define "swisstheme"}}
+<div class="sw-theme" role="group" aria-label="Colour theme">
+    <button type="button" data-set-theme="light" aria-label="Light theme" title="Light theme">
+        <i class="fas fa-circle-half-stroke fa-flip-horizontal" aria-hidden="true"></i>
+    </button>
+    <button type="button" data-set-theme="dark" aria-label="Dark theme" title="Dark theme">
+        <i class="fas fa-circle-half-stroke" aria-hidden="true"></i>
+    </button>
+</div>
+{{end}}
+
+{{define "swissnav"}}
+<nav class="sw-nav">
+    <div class="sw-nav-inner">
+        <a href="/dashboard" class="sw-brand">Schalek<span>Page</span></a>
+        {{/* The tab bar below is phone-only (display:none above 768px), so
+             without these the new pages are unreachable by clicking on a
+             desktop browser. */}}
+        <div class="sw-nav-links">
+            <a href="/timetable/">Timetable</a>
+            <a href="/lunches/">Lunches</a>
+            <a href="/grades">Grades</a>
+            <a href="/substitutions/">Subs</a>
+            <a href="/homework">Homework</a>
+            <a href="/exams">Exams</a>
+            <a href="/messages">Messages</a>
+        </div>
+        <div class="sw-nav-right">
+            {{if .Student}}<span class="sw-user">{{.Student.Name}}</span>{{end}}
+            {{template "swisstheme"}}
+            <form method="post" action="/logout">
+                <button type="submit" class="sw-btn sw-btn--icon" aria-label="Sign out" title="Sign out">
+                    <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
+{{end}}
+
+{{define "swissthemejs"}}
+<script>
+    (function () {
+        var root = document.documentElement;
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-set-theme]");
+            if (!btn) return;
+            var theme = btn.getAttribute("data-set-theme");
+            root.setAttribute("data-theme", theme);
+            try { localStorage.setItem("sp-theme", theme); } catch (err) { /* private mode */ }
+        });
+    })();
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+            navigator.serviceWorker.register("/sw.js").catch(function () { /* offline support is best-effort */ });
+        });
+    }
+</script>
+{{end}}
+
+{{/*
+  Fixed bottom tab bar shown on phones only (see .sw-tabbar in main.css).
+  "active" reads a data attribute on <body data-nav="..."> set per page, so
+  the current tab can be highlighted without JS.
+*/}}
+{{define "swisstabbar"}}
+<nav class="sw-tabbar" aria-label="Primary">
+    <a href="/dashboard" class="sw-tab" data-tab="dashboard">
+        <i class="fas fa-house" aria-hidden="true"></i>
+        <span>Home</span>
+    </a>
+    <a href="/timetable/" class="sw-tab" data-tab="timetable">
+        <i class="fas fa-clock" aria-hidden="true"></i>
+        <span>Timetable</span>
+    </a>
+    <a href="/lunches/" class="sw-tab" data-tab="lunches">
+        <i class="fas fa-utensils" aria-hidden="true"></i>
+        <span>Lunches</span>
+    </a>
+    <a href="/grades" class="sw-tab" data-tab="grades">
+        <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+        <span>Grades</span>
+    </a>
+    <a href="/substitutions/" class="sw-tab" data-tab="substitutions">
+        <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+        <span>Subs</span>
+    </a>
+    <a href="/homework" class="sw-tab" data-tab="homework">
+        <i class="fas fa-book" aria-hidden="true"></i>
+        <span>Homework</span>
+    </a>
+    <a href="/exams" class="sw-tab" data-tab="exams">
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+        <span>Exams</span>
+    </a>
+    <a href="/messages" class="sw-tab" data-tab="messages">
+        <i class="fas fa-envelope" aria-hidden="true"></i>
+        <span>Messages</span>
+    </a>
+</nav>
+<script>
+    (function () {
+        var current = document.body.getAttribute("data-nav");
+        if (!current) return;
+        var tab = document.querySelector('.sw-tab[data-tab="' + current + '"]');
+        if (tab) tab.setAttribute("aria-current", "page");
+    })();
+</script>
+{{end}}

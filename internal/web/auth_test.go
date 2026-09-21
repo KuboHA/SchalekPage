@@ -13,9 +13,11 @@ import (
 
 func newTestServer() *Server {
 	return &Server{
-		sessions: NewStore(time.Hour),
-		logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
-		now:      time.Now,
+		sessions:  NewStore(time.Hour),
+		loginRate: newRateLimiter(loginRateLimit, loginRateWindow),
+		oauth:     newOAuthStore(),
+		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		now:       time.Now,
 	}
 }
 

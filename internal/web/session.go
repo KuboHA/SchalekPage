@@ -44,6 +44,12 @@ type Session struct {
 	StudentName string
 	StudentID   int
 
+	// OAuthRequestID, when non-empty, is the id of a pending OAuth
+	// authorize request (see oauth.go) that this login is completing on
+	// behalf of an MCP client. It is cleared once the redirect back to the
+	// client has been issued.
+	OAuthRequestID string
+
 	createdAt time.Time
 	lastSeen  time.Time
 }

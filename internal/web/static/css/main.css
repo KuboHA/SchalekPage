@@ -1,242 +1,2367 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import "tailwindcss";
+/* ==========================================================================
+   SchalekPage — Swiss Grayscale
+   A bold International-Typographic-Style layer that sits on top of the
+   prebuilt Tailwind utilities in style.css.
+
+   How it works
+   ------------
+   1. Semantic tokens (--canvas, --ink, --rule, ...) are defined twice: once
+      for the dark theme and once for the light one, selected by the
+      `data-theme` attribute on <html> (set pre-paint by the inline script in
+      the "swisshead" template partial).
+   2. Tailwind's own colour tokens are then *re-pointed* at those semantic
+      tokens. Every existing `text-indigo-300`, `bg-gray-800/50`,
+      `ring-green-500` in the templates therefore resolves to a grayscale
+      value automatically, and flips with the theme, without touching the
+      markup.
+   3. A neutraliser strips the decoration Swiss design has no use for —
+      rounded corners, drop shadows, backdrop blur — and a component layer
+      rebuilds the chrome as rules, blocks and type.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Tokens
+   -------------------------------------------------------------------------- */
 
 :root {
-  --primary-bg: linear-gradient(135deg, #0f172a, #1e293b);
-  --card-bg: rgba(30, 41, 59, 0.75);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --accent-blue: #60a5fa;
-  --accent-indigo: #818cf8;
-  --accent-green: #34d399;
-  --accent-yellow: #fbbf24;
-  --accent-purple: #a78bfa;
-  --text-primary: #f3f4f6;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --bg-color: #0f172a; /* Adding solid background color for consistency */
+  --font-display: "Inter Tight", "Helvetica Neue", Helvetica, Inter, Arial, sans-serif;
+  --font-text: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Swiss grid: everything lands on an 8px rhythm. */
+  --gutter: 1.5rem;
+  --rule-hair: 1px;
+  --rule-bold: 2px;
+  --rule-heavy: 4px;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --speed: 120ms;
 }
 
-/* Add styles for HTML element to ensure full coverage */
+/* Dark theme — ink on black. Default when nothing else matches. */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #000000;
+  --surface: #0b0b0b;
+  --surface-2: #161616;
+  --surface-3: #202020;
+
+  --ink: #fafafa;
+  --ink-2: #b0b0b0;
+  --ink-3: #7a7a7a;
+  --ink-4: #545454;
+
+  --rule: #262626;
+  --rule-2: #3d3d3d;
+
+  --invert-bg: #fafafa;
+  --invert-ink: #000000;
+
+  /* Translucent washes used for hover rows and subtle fills. */
+  --tint-1: rgba(250, 250, 250, 0.06);
+  --tint-2: rgba(250, 250, 250, 0.11);
+  --tint-3: rgba(250, 250, 250, 0.18);
+
+  --focus: #fafafa;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f2f2;
+  --surface-3: #e6e6e6;
+
+  --ink: #000000;
+  --ink-2: #4a4a4a;
+  --ink-3: #7a7a7a;
+  --ink-4: #a6a6a6;
+
+  --rule: #e2e2e2;
+  --rule-2: #c4c4c4;
+
+  --invert-bg: #000000;
+  --invert-ink: #ffffff;
+
+  --tint-1: rgba(0, 0, 0, 0.05);
+  --tint-2: rgba(0, 0, 0, 0.09);
+  --tint-3: rgba(0, 0, 0, 0.15);
+
+  --focus: #000000;
+}
+
+/* --------------------------------------------------------------------------
+   2. Re-point Tailwind's palette at the semantic tokens
+   Unlayered rules beat anything inside @layer theme, so these win.
+   -------------------------------------------------------------------------- */
+
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  /* Neutrals. The ramp is *inverted* in the light theme by virtue of
+     --ink/--canvas swapping, so `text-gray-400` stays "muted" either way. */
+  --color-white: var(--ink);
+  --color-gray-100: var(--ink);
+  --color-gray-200: var(--ink);
+  --color-gray-300: var(--ink-2);
+  --color-gray-400: var(--ink-3);
+  --color-gray-500: var(--ink-4);
+  --color-gray-700: var(--rule-2);
+  --color-gray-800: var(--surface-2);
+  --color-gray-900: var(--canvas);
+
+  --color-slate-600: var(--rule-2);
+  --color-slate-700: var(--surface-3);
+  --color-slate-800: var(--surface-2);
+  --color-slate-900: var(--canvas);
+
+  /* Chromatic ramps collapse onto the neutral axis.
+     …-200/300/400 read as type, …-500/600 as fills, …-900 as surfaces. */
+  --color-red-300: var(--ink);
+  --color-red-400: var(--ink);
+  --color-red-500: var(--ink);
+  --color-red-900: var(--surface-2);
+
+  --color-orange-400: var(--ink-2);
+  --color-orange-500: var(--ink);
+
+  --color-yellow-400: var(--ink-2);
+  --color-yellow-500: var(--ink);
+
+  --color-green-400: var(--ink-2);
+  --color-green-500: var(--ink);
+  --color-green-900: var(--surface-2);
+
+  --color-blue-200: var(--ink-2);
+  --color-blue-300: var(--ink-2);
+  --color-blue-400: var(--ink-2);
+  --color-blue-500: var(--ink);
+  --color-blue-600: var(--invert-bg);
+  --color-blue-900: var(--surface-2);
+
+  --color-indigo-300: var(--ink-2);
+  --color-indigo-400: var(--ink-2);
+  --color-indigo-500: var(--ink);
+  --color-indigo-600: var(--invert-bg);
+  --color-indigo-900: var(--surface-2);
+
+  --color-purple-400: var(--ink-2);
+  --color-purple-500: var(--ink);
+}
+
+/* Solid inverted fills need inverted type, or ink lands on ink. */
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-blue-600,
+.hover\:bg-indigo-500:hover,
+.hover\:bg-blue-500:hover {
+  background-color: var(--invert-bg);
+  color: var(--invert-ink);
+}
+.bg-indigo-600 *,
+.bg-indigo-500 *,
+.bg-blue-600 * {
+  color: inherit;
+}
+
+/* Alpha washes: color-mix against a near-canvas surface reads as nothing in
+   the light theme, so point them at the explicit tint scale instead. */
+.bg-gray-800\/30,
+.bg-gray-800\/50,
+.bg-gray-700\/50,
+.bg-slate-800\/50,
+.bg-slate-800\/80,
+.hover\:bg-gray-800\/30:hover,
+.hover\:bg-gray-800\/50:hover,
+.hover\:bg-gray-800\/20:hover {
+  background-color: var(--tint-1);
+}
+
+.border-gray-700\/50,
+.border-gray-800\/50,
+.border-gray-600\/30,
+.border-slate-700\/50,
+.border-indigo-500\/10,
+.border-indigo-500\/30,
+.border-red-500\/30 {
+  border-color: var(--rule);
+}
+
+/* --------------------------------------------------------------------------
+   3. Neutraliser — Swiss has no rounded corners, no shadows, no blur
+   -------------------------------------------------------------------------- */
+
+[class*="rounded"] {
+  border-radius: 0 !important;
+}
+
+[class*="shadow"] {
+  box-shadow: none !important;
+}
+
+[class*="backdrop-blur"],
+[class*="backdrop-filter"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Gradient utilities flatten to a single fill. */
+[class*="bg-gradient-to"] {
+  background-image: none !important;
+}
+
+/* `bg-clip-text` + `text-transparent` was only ever used for gradient
+   wordmarks; with gradients gone the text would vanish. */
+.bg-clip-text {
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+}
+.text-transparent {
+  color: var(--ink) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Base
+   -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
-  background-color: var(--bg-color);
-  height: 100%;
-  overflow-x: hidden;
+  background-color: var(--canvas);
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background: var(--primary-bg);
-  background-attachment: fixed;
-  background-size: cover;
-  min-height: 100vh;
   margin: 0;
-  color: var(--text-primary);
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv05" 1, "ss03" 1, "tnum" 0;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, a, .clickable, [role="button"] {
+  cursor: pointer;
+}
+
+strong, b {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+hr {
+  border: 0;
+  border-top: var(--rule-bold) solid var(--ink);
+  margin: 2rem 0;
+}
+
+::selection {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+
+:focus-visible {
+  outline: var(--rule-bold) solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Tabular numerals wherever a number carries meaning. */
+.sw-num,
+.sw-period,
+.sw-grade,
+.timetable td,
+.mobile-period-number,
+.mobile-class-room {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* --------------------------------------------------------------------------
+   5. Scrollbars
+   -------------------------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rule-2);
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   6. Navigation bar
+   -------------------------------------------------------------------------- */
+
+.sw-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--canvas);
+  border-bottom: var(--rule-bold) solid var(--ink);
+}
+
+.sw-nav-inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sw-brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.0625rem;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.sw-brand span {
+  color: var(--ink-3);
+}
+.sw-brand:hover span {
+  color: var(--ink);
+}
+
+.sw-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.sw-user {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Theme switcher — two hard-edged halves, the active one inverted. */
+.sw-theme {
+  display: inline-flex;
+  border: var(--rule-hair) solid var(--ink);
+  flex: none;
+}
+
+.sw-theme button {
+  appearance: none;
+  background: var(--canvas);
+  color: var(--ink-3);
+  border: 0;
+  width: 2rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.6875rem;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+
+.sw-theme button + button {
+  border-left: var(--rule-hair) solid var(--ink);
+}
+
+.sw-theme button:hover {
+  color: var(--ink);
+}
+
+[data-theme="light"] .sw-theme button[data-set-theme="light"],
+[data-theme="dark"] .sw-theme button[data-set-theme="dark"] {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+
+/* --------------------------------------------------------------------------
+   7. Page shell & display typography
+   -------------------------------------------------------------------------- */
+
+.sw-shell {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+.sw-shell--narrow {
+  max-width: 64rem;
+}
+
+.sw-head {
+  padding: 2.5rem 0 1.25rem;
+  border-bottom: var(--rule-heavy) solid var(--ink);
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+}
+
+.sw-eyebrow {
+  display: block;
+  font-family: var(--font-text);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.625rem;
+}
+
+.sw-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 8vw, 4.25rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.sw-sub {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  letter-spacing: 0.01em;
+}
+
+.sw-section-title {
+  font-family: var(--font-text);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-bottom: 0.625rem;
+  margin-bottom: 1rem;
+  border-bottom: var(--rule-bold) solid var(--ink);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sw-link {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: var(--rule-hair) solid var(--ink-3);
+  padding-bottom: 1px;
+  transition: border-color var(--speed) var(--ease);
+}
+.sw-link:hover {
+  border-color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   8. Surfaces
+   -------------------------------------------------------------------------- */
+
 .card {
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--card-border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  background: var(--surface);
+  border: var(--rule-hair) solid var(--rule);
+  box-shadow: none;
+  backdrop-filter: none;
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease);
+}
+
+.card .card {
+  background: transparent;
+  border-color: var(--rule);
 }
 
 .hover-scale {
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease);
 }
-
 .hover-scale:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: none;
+  background: var(--tint-1);
+  border-color: var(--ink);
 }
 
-button, a, .clickable {
-  cursor: pointer;
+.sw-empty {
+  border: var(--rule-hair) dashed var(--rule-2);
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--ink-3);
+}
+.sw-empty i {
+  font-size: 1.5rem;
+  color: var(--ink-4);
+  margin-bottom: 0.875rem;
+  display: block;
+}
+.sw-empty h3 {
+  font-size: 0.875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 0.375rem;
+}
+.sw-empty p {
+  margin: 0;
+  font-size: 0.8125rem;
 }
 
-button[id^="btn-"] {
-  cursor: pointer;
+/* --------------------------------------------------------------------------
+   9. Controls
+   -------------------------------------------------------------------------- */
+
+.sw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  background: var(--canvas);
+  color: var(--ink);
+  border: var(--rule-hair) solid var(--ink);
+  font-family: var(--font-text);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.sw-btn:hover {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+.sw-btn--solid {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+.sw-btn--solid:hover {
+  background: var(--canvas);
+  color: var(--ink);
+}
+.sw-btn--block {
+  width: 100%;
+  height: 2.75rem;
+}
+.sw-btn--icon {
+  width: 2.25rem;
+  padding: 0;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.sw-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
 }
-::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.5);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(96, 165, 250, 0.5);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(96, 165, 250, 0.7);
+.sw-btn-group .sw-btn + .sw-btn {
+  margin-left: -1px;
 }
 
-/* Enhanced Header Styles */
-.section-header {
+/* The old ad-hoc "back to dashboard" pill, restyled as a rule-and-arrow. */
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1.5rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color var(--speed) var(--ease);
+}
+.back-button:hover {
+  color: var(--ink);
+  transform: none;
+}
+.back-button .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  border: var(--rule-hair) solid currentColor;
+  background: none;
+  box-shadow: none;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.back-button:hover .icon {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+  transform: none;
+}
+.back-button .icon i {
+  font-size: 0.625rem;
+  color: inherit;
+}
+.back-button span {
+  margin: 0;
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+
+/* Form fields */
+.sw-field {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+.sw-label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.5rem;
+}
+.sw-input {
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 0.875rem;
+  background: var(--canvas);
+  color: var(--ink);
+  border: var(--rule-hair) solid var(--rule-2);
+  border-radius: 0;
+  font-family: var(--font-text);
+  font-size: 0.9375rem;
+  letter-spacing: -0.005em;
+  outline: none;
+  transition: border-color var(--speed) var(--ease);
+}
+.sw-input::placeholder {
+  color: var(--ink-4);
+}
+.sw-input:focus {
+  border-color: var(--ink);
+  border-width: var(--rule-bold);
+  padding: 0 calc(0.875rem - 1px);
+  outline: none;
+}
+
+.sw-notice {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+.sw-notice i {
+  margin-top: 0.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   10. Badges
+   Colour carried the meaning before; weight and fill carry it now.
+   -------------------------------------------------------------------------- */
+
+.badge,
+.sw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Cancelled / removed — the loudest state: a solid inverted block. */
+.badge-red,
+.sw-badge--solid {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+  border-color: var(--invert-bg);
+}
+
+/* Change / substitution — outlined in full ink. */
+.badge-blue,
+.badge-yellow,
+.sw-badge--strong {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* Addition — a quiet filled wash. */
+.badge-green,
+.sw-badge--fill {
+  background: var(--tint-2);
+  color: var(--ink);
+  border-color: transparent;
+}
+
+/* Unknown — hairline, muted. */
+.badge-gray,
+.sw-badge--quiet {
+  background: transparent;
+  color: var(--ink-3);
+  border-color: var(--rule-2);
+  border-style: dashed;
+}
+
+/* Grade badges (classes emitted by internal/web/grades_view.go).
+   Five levels read as five steps of a grayscale ramp: 1 is a solid inverted
+   block, 5 is a hairline outline, so severity survives without hue. */
+.sw-grade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  padding: 0.1875rem 0.5rem;
+  border: var(--rule-hair) solid transparent;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.sw-grade--1 { background: var(--invert-bg); color: var(--invert-ink); }
+.sw-grade--2 { background: var(--tint-3); color: var(--ink); }
+.sw-grade--3 { background: var(--tint-2); color: var(--ink); }
+.sw-grade--4 { background: var(--tint-1); color: var(--ink); border-color: var(--rule-2); }
+.sw-grade--5 { background: transparent; color: var(--ink); border-color: var(--ink); border-width: var(--rule-bold); }
+.sw-grade--none { background: transparent; color: var(--ink-3); border-color: var(--rule-2); border-style: dashed; }
+
+/* --------------------------------------------------------------------------
+   11. Tables (timetable + substitutions)
+   -------------------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+thead th {
+  font-family: var(--font-text);
+  font-size: 0.5625rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3) !important;
+  text-align: left;
+  padding: 0 0 0.625rem !important;
+  border-bottom: var(--rule-bold) solid var(--ink);
+}
+
+tbody td {
+  padding: 0.875rem 0 !important;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr {
+  transition: background var(--speed) var(--ease);
+}
+
+tbody td:not(:first-child) {
+  padding-left: 1rem !important;
+}
+
+/* Period marker: a numbered square, not a coloured pill. */
+.sw-period,
+td .inline-block.w-7 {
+  display: inline-grid !important;
+  place-items: center;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  background: var(--invert-bg) !important;
+  color: var(--invert-ink) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1 !important;
+}
+
+.timetable {
+  border-collapse: collapse;
+  width: 100%;
+}
+.timetable th {
+  text-align: left;
+  padding: 0 0 0.625rem;
+  background: transparent;
+  border-bottom: var(--rule-bold) solid var(--ink);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.timetable td {
+  padding: 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+}
+.timetable tr:last-child td {
+  border-bottom: none;
+}
+.period-number {
+  width: 3.5rem;
+  text-align: left;
+  background: transparent;
+  border-right: var(--rule-hair) solid var(--rule);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.125rem;
+  padding: 1rem 0.75rem;
+}
+.period-time {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-text);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
+/* Substitution entries: a left rule whose weight encodes the action. */
+.substitution-card {
+  position: relative;
+  margin: 0.5rem 0;
+  padding: 0.875rem 1rem 0.875rem 1.25rem;
+  background: transparent;
+  border: var(--rule-hair) solid var(--rule);
+  border-radius: 0;
+  transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease);
+}
+.substitution-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: -1px;
+  width: var(--rule-heavy);
+  background: var(--rule-2);
+}
+.substitution-card:hover {
+  background: var(--tint-1);
+  border-color: var(--ink);
+  transform: none;
+}
+.substitution-card:hover::before {
+  width: var(--rule-heavy);
+}
+
+.substitution-card.type-remove::before,
+.substitution-card.type-deletion::before,
+.substitution-card.type-removal::before {
+  background: var(--ink);
+}
+.substitution-card.type-change::before,
+.substitution-card.type-substitution::before,
+.substitution-card.type-classroom_change::before {
+  background: var(--ink);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--ink) 0 4px,
+    transparent 4px 8px
+  );
+}
+.substitution-card.type-add::before,
+.substitution-card.type-addition::before {
+  background: var(--ink-4);
+}
+
+/* --------------------------------------------------------------------------
+   12. Dashboard mobile cards
+   -------------------------------------------------------------------------- */
+
+.mobile-info-cards {
+  display: flex;
+  margin: 0 0 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 0;
+  padding-bottom: 0.5rem;
+}
+.mobile-info-cards::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-info-card {
+  scroll-snap-align: start;
+  flex: 0 0 88%;
+  max-width: 88%;
+  margin-right: 0.75rem;
+  background: var(--surface);
+  border: var(--rule-hair) solid var(--rule);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.mobile-card-header {
+  padding: 0.625rem 0.875rem;
+  border-bottom: var(--rule-bold) solid var(--ink);
+  background: transparent;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 0.75rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.75rem;
 }
-
-.section-title {
+.mobile-card-header h3 {
   display: flex;
   align-items: center;
-  font-weight: 600;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.mobile-card-header .mobile-card-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0;
+  font-size: 0.625rem;
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+.mobile-lunch-icon,
+.mobile-timetable-icon {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
 }
 
-.section-title i {
-  margin-right: 0.5rem;
+.mobile-card-link {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: none;
+  padding: 0;
+  border-bottom: var(--rule-hair) solid var(--ink-3);
+}
+.mobile-card-link:active {
+  transform: none;
+  border-color: var(--ink);
 }
 
-/* Card styles */
-.enhanced-card {
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+.mobile-card-content {
+  padding: 0.75rem 0.875rem;
+  max-height: 26vh;
+  overflow-y: auto;
 }
 
-/* Icon badge */
-.icon-badge {
-  width: 2.5rem;
-  height: 2.5rem;
+.mobile-lunch-item {
+  position: relative;
+  padding: 0.5rem 0 0.625rem;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  margin: 0;
+}
+.mobile-lunch-item:last-child {
+  border-bottom: 0;
+}
+.mobile-lunch-ordered {
+  background: transparent;
+  border: 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  padding-left: 0.75rem;
+}
+.mobile-lunch-ordered::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.625rem;
+  width: var(--rule-bold);
+  background: var(--ink);
+  border-radius: 0;
+}
+.mobile-lunch-menu-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0;
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mobile-lunch-text {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+.mobile-lunch-ordered .mobile-lunch-text {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.mobile-timetable-item {
   display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  margin: 0;
+}
+.mobile-timetable-item:last-child {
+  border-bottom: 0;
+}
+
+.mobile-period-number {
+  width: 1.5rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.6875rem;
+  flex-shrink: 0;
+}
+
+.mobile-class-info {
+  flex: 1;
+  min-width: 0;
+}
+.mobile-class-subject {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mobile-class-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+}
+.mobile-class-teacher {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 70%;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mobile-class-room {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.05rem 0.3rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mobile-empty-message {
+  text-align: center;
+  padding: 1.5rem 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.mobile-empty-message i {
+  display: block;
+  font-size: 1.25rem;
+  margin-bottom: 0.625rem;
+  color: var(--ink-4);
+}
+
+.mobile-pagination {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+.mobile-pagination-dot {
+  width: 1.5rem;
+  height: 2px;
+  border-radius: 0 !important;
+  background: var(--rule-2);
+  transition: background var(--speed) var(--ease);
+}
+.mobile-pagination-dot.active {
+  background: var(--ink);
+  transform: none;
+}
+
+/* Mobile period cards on timetable / substitutions */
+.mobile-period-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0.875rem 0.875rem 0.875rem 1.125rem;
+  margin-bottom: 0.5rem;
+  background: transparent;
+  border: var(--rule-hair) solid var(--rule);
+  border-radius: 0;
+}
+.mobile-period-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: -1px;
+  width: var(--rule-bold);
+  background: var(--ink);
+  border-radius: 0;
+}
+.mobile-period-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.25rem;
+}
+.mobile-period-title-row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.625rem;
+  overflow: hidden;
+}
+.mobile-period-subject {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mobile-period-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: var(--rule-hair) solid var(--rule);
+}
+.mobile-period-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+.mobile-period-detail i {
+  width: 1rem;
+  text-align: center;
+  color: var(--ink-4);
+}
+.mobile-period-time {
+  font-size: 0.625rem !important;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.375rem !important;
+  border: var(--rule-hair) solid var(--rule-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.mobile-empty-state {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  text-align: center;
+  padding: 2.5rem 1rem;
+  background: transparent;
+  border: var(--rule-hair) dashed var(--rule-2);
+  border-radius: 0;
+}
+.mobile-empty-state-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1rem;
+  background: transparent;
+  border: var(--rule-hair) solid var(--rule-2);
+  border-radius: 0;
+  color: var(--ink-3);
+  font-size: 1rem;
+}
+.mobile-empty-state-icon i {
+  font-size: 1rem;
 }
 
-/* Fix notification text display */
-.notification-text {
+/* --------------------------------------------------------------------------
+   13. Notifications
+   -------------------------------------------------------------------------- */
+
+.notification-text,
+.whitespace-pre-wrap {
   word-wrap: break-word;
   overflow-wrap: break-word;
-  word-break: break-word;
   hyphens: auto;
 }
-
 .notification-text img {
   max-width: 100%;
   height: auto;
+  filter: grayscale(1);
 }
-
 .notification-text a {
   display: inline-block;
   max-width: 100%;
   overflow-wrap: break-word;
+  border-bottom: var(--rule-hair) solid var(--ink-3);
 }
 
-/* Mobile styles */
+/* Attachment chips */
+.sw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 0.3125rem 0.5rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease),
+              color var(--speed) var(--ease);
+}
+.sw-chip:hover {
+  background: var(--tint-1);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.sw-chip-name {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   14. Motion — restrained, and off entirely when asked
+   -------------------------------------------------------------------------- */
+
+.timetable-row {
+  animation: sw-rise 0.32s var(--ease) forwards;
+  opacity: 0;
+  animation-delay: calc(var(--row-index, 0) * 0.03s);
+}
+
+@keyframes sw-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.day-container {
+  transition: opacity 0.2s var(--ease);
+}
+.day-container.prev,
+.day-container.next {
+  opacity: 0.35;
+  filter: none;
+  transform: none;
+}
+.day-container.active {
+  opacity: 1;
+  transform: none;
+  z-index: 10;
+}
+.day-card {
+  box-shadow: none;
+}
+
+.page-transition {
+  transition: opacity 0.2s var(--ease);
+}
+
+.loader {
+  animation: sw-spin 0.9s linear infinite;
+}
+@keyframes sw-spin {
+  to { transform: rotate(360deg); }
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .timetable-row {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   15. Responsive
+   -------------------------------------------------------------------------- */
+
 @media (max-width: 768px) {
-  .mobile-timetable-container {
-    display: block !important;
-    border-radius: 1rem;
-    overflow: hidden;
-    margin-bottom: 1rem;
+  :root {
+    --gutter: 1rem;
   }
-  
-  .mobile-timetable-header {
-    background: rgba(79, 70, 229, 0.2);
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(79, 70, 229, 0.2);
-  }
-  
-  .mobile-lunch-container {
-    display: block !important;
-    margin-bottom: 1rem;
-  }
-  
+
   .desktop-sections {
     display: none !important;
   }
-  
-  .btn-text-mobile {
-    display: none !important;
+
+  .mobile-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  
+
+  .sw-head {
+    padding-top: 1.75rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  /* Quick actions become a four-across band of labelled squares. */
+  .btn-mobile {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    height: 4.25rem;
+    padding: 0.5rem 0.25rem !important;
+    background: transparent;
+    border: var(--rule-hair) solid var(--rule-2);
+    border-radius: 0 !important;
+    transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease);
+  }
+  .btn-mobile:active {
+    background: var(--invert-bg);
+    color: var(--invert-ink);
+    border-color: var(--invert-bg);
+    transform: none;
+  }
+  .btn-mobile:active .btn-icon-mobile i,
+  .btn-mobile:active .btn-text-mobile {
+    color: var(--invert-ink);
+  }
   .btn-icon-mobile {
-    margin: 0 auto !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
   }
-  
-  .mobile-actions {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
+  .btn-icon-mobile i {
+    font-size: 1.0625rem !important;
+    color: var(--ink) !important;
+    animation: none !important;
   }
-  
-  .mobile-action-btn {
-    padding: 0.75rem !important;
-    border-radius: 0.75rem !important;
+  .btn-text-mobile {
+    display: block !important;
+    margin: 0 !important;
+    font-size: 0.5rem !important;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-align: center;
   }
-  
+
+  .mobile-touch-target,
+  .mobile-tap-area {
+    min-height: 44px;
+  }
   .sticky-mobile {
     position: relative !important;
     top: 0 !important;
   }
-  
   .mobile-scroll {
     -webkit-overflow-scrolling: touch;
-    max-height: 260px;
-    overflow-y: auto;
   }
-  
-  .mobile-order-first {
-    order: -1 !important;
+  .mobile-order-first { order: -1 !important; }
+  .mobile-order-0 { order: 0 !important; }
+  .mobile-order-1 { order: 1 !important; }
+  .mobile-order-2 { order: 2 !important; }
+  .mobile-order-3 { order: 3 !important; }
+}
+
+@media (max-width: 640px) {
+  .desktop-table {
+    display: none !important;
+  }
+  .mobile-cards {
+    display: block !important;
+  }
+  .sw-title {
+    letter-spacing: -0.04em;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-cards {
+    display: none;
+  }
+}
+
+/* Print: Swiss on paper, which is where it started. */
+@media print {
+  :root {
+    --canvas: #fff;
+    --ink: #000;
+    --ink-2: #333;
+    --ink-3: #666;
+    --rule: #ccc;
+    --invert-bg: #000;
+    --invert-ink: #fff;
+  }
+  .sw-nav,
+  .sw-theme,
+  .back-button,
+  .sw-btn-group {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   16. Auth pages (login, two-factor)
+   A two-column Swiss poster: the wordmark holds the left field, the form
+   sits in a bordered block on the right.
+   -------------------------------------------------------------------------- */
+
+.sw-auth {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+
+.sw-auth-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 3.5rem;
+  padding: 0 var(--gutter);
+  border-bottom: var(--rule-bold) solid var(--ink);
+}
+
+.sw-auth-main {
+  flex: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 8vh, 5rem) var(--gutter);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: start;
+}
+
+.sw-auth-col {
+  min-width: 0;
+  padding-right: 2.5rem;
+}
+
+.sw-auth-col--form {
+  padding: 0 0 0 2.5rem;
+  border-left: var(--rule-hair) solid var(--rule);
+}
+
+.sw-auth-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 11vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.85;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.sw-auth-lede {
+  max-width: 22ch;
+  margin: 1.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.sw-auth-foot {
+  margin: 1.5rem 0 0;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.sw-input--code {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .sw-auth-main {
+    grid-template-columns: 1fr;
+    padding-top: 2.5rem;
+  }
+  .sw-auth-col {
+    padding-right: 0;
+  }
+  .sw-auth-col--form {
+    margin-top: 2.5rem;
+    padding: 2rem 0 0;
+    border-left: 0;
+    border-top: var(--rule-heavy) solid var(--ink);
+  }
+  .sw-auth-lede {
+    max-width: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   17. Grades
+   -------------------------------------------------------------------------- */
+
+.sw-stat {
+  text-align: right;
+}
+.sw-stat .sw-eyebrow {
+  margin-bottom: 0.5rem;
+}
+.sw-stat-value {
+  font-size: 1.5rem;
+  min-width: 2.75rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.sw-subjects {
+  padding-bottom: 4rem;
+}
+
+.sw-subject + .sw-subject {
+  margin-top: 2.5rem;
+}
+
+.sw-subject-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.625rem;
+  border-bottom: var(--rule-bold) solid var(--ink);
+}
+
+.sw-subject-name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.sw-subject-avg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+}
+
+.sw-grade-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sw-grade-row {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  transition: background var(--speed) var(--ease);
+}
+.sw-grade-row:last-child {
+  border-bottom: 0;
+}
+.sw-grade-row:hover {
+  background: var(--tint-1);
+}
+
+.sw-grade-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sw-grade-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.sw-grade-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  text-align: right;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .sw-grade-row {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    row-gap: 0.5rem;
+  }
+  .sw-grade-meta {
+    grid-column: 2;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+  .sw-subject-head {
+    flex-wrap: wrap;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   18. Date strip + lunches
+   -------------------------------------------------------------------------- */
+
+.sw-datestrip {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2.5rem;
+  overflow-x: auto;
+  border: var(--rule-hair) solid var(--rule);
+  border-right: 0;
+}
+
+.sw-date {
+  flex: 1 0 3.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.625rem 0.5rem;
+  border-right: var(--rule-hair) solid var(--rule);
+  color: var(--ink-2);
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.sw-date:hover {
+  background: var(--tint-1);
+  color: var(--ink);
+}
+.sw-date.is-weekend {
+  color: var(--ink-4);
+}
+.sw-date.is-current {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+
+.sw-date-dow,
+.sw-date-mon {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.sw-date-day {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.sw-meals {
+  padding-bottom: 4rem;
+}
+.sw-meal + .sw-meal {
+  margin-top: 2.5rem;
+}
+
+.sw-meal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.625rem;
+  border-bottom: var(--rule-bold) solid var(--ink);
+}
+
+.sw-meal-type {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.sw-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sw-menu {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+}
+.sw-menu:last-child {
+  border-bottom: 0;
+}
+
+.sw-menu-key {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink-3);
+}
+.sw-menu.is-selected .sw-menu-key {
+  background: var(--invert-bg);
+  border-color: var(--invert-bg);
+  color: var(--invert-ink);
+}
+
+.sw-menu-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.sw-menu-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.sw-menu.is-selected .sw-menu-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sw-menu-allergens {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+
+/* --------------------------------------------------------------------------
+   19. Dashboard
+   -------------------------------------------------------------------------- */
+
+.sw-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-bottom: 2rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  border-left: 0;
+}
+
+.sw-action,
+.sw-actions .btn-mobile {
+  border: 0 !important;
+  border-left: var(--rule-hair) solid var(--rule-2) !important;
+}
+
+.sw-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.75rem;
+  min-height: 6.5rem;
+  padding: 1rem;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.sw-action:hover {
+  background: var(--invert-bg);
+  color: var(--invert-ink);
+}
+.sw-action-icon i {
+  font-size: 1.125rem;
+  color: inherit;
+}
+.sw-action-label {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.sw-panel {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.sw-mini {
+  display: block;
+  padding: 0.625rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  background: transparent;
+  transition: background var(--speed) var(--ease);
+}
+/* Only the genuinely last row drops its rule. .sw-mini is usually the sole
+   child of an <li>, so :last-child on the item itself would match every
+   row. */
+li:last-child > .sw-mini,
+.sw-mini:last-of-type:not(li > .sw-mini) {
+  border-bottom: 0;
+}
+.sw-mini:hover {
+  background: var(--tint-1);
+}
+.sw-mini.is-selected {
+  padding-left: 0.625rem;
+  border-left: var(--rule-bold) solid var(--ink);
+}
+
+.sw-note {
+  display: block;
+  padding: 1.125rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+  transition: background var(--speed) var(--ease);
+}
+.sw-note:last-child {
+  border-bottom: 0;
+}
+.sw-note:hover {
+  background: var(--tint-1);
+}
+
+.sw-replies {
+  margin-top: 0.875rem;
+  padding-left: 1rem;
+  border-left: var(--rule-bold) solid var(--rule-2);
+}
+.sw-replies > * + * {
+  margin-top: 0.875rem;
+}
+
+/* The class happening right now, or the one coming up next. */
+.highlighted-class {
+  position: relative;
+  background: var(--tint-2) !important;
+  padding-left: 0.625rem !important;
+  border-left: var(--rule-heavy) solid var(--ink) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   20. Loader, spinner, modal
+   -------------------------------------------------------------------------- */
+
+.sw-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas);
+  color: var(--ink);
+}
+.hidden-loader {
+  display: none !important;
+}
+
+.sw-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--rule-bold) solid var(--rule-2);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: sw-spin 0.7s linear infinite;
+}
+
+.sw-cancelled {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  color: var(--ink-3);
+}
+
+.sw-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--canvas) 92%, transparent);
+}
+.sw-modal.hidden {
+  display: none;
+}
+
+.sw-modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
+  background: var(--canvas);
+  border: var(--rule-bold) solid var(--ink);
+  overflow: hidden;
+}
+
+.sw-modal-head,
+.sw-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+}
+.sw-modal-head {
+  border-bottom: var(--rule-hair) solid var(--rule);
+}
+.sw-modal-foot {
+  border-top: var(--rule-hair) solid var(--rule);
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.sw-modal-title {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-modal-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  max-height: 50vh;
+  overflow: auto;
+  background: var(--surface-2);
+}
+
+@media (max-width: 768px) {
+  .sw-actions {
+    margin-bottom: 1.5rem;
+  }
+  .sw-action {
+    min-height: 0;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   21. Bottom tab bar (phones + installed PWA)
+   A fixed, thumb-reach nav that mirrors native app chrome. Hidden on
+   anything wider than a phone, where the top nav + quick actions already
+   cover navigation.
+   -------------------------------------------------------------------------- */
+
+.sw-tabbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body.has-tabbar {
+    padding-bottom: calc(3.75rem + env(safe-area-inset-bottom));
   }
 
-  /* Fix for mobile browsers that show white space beyond page boundaries */
-  body::before,
-  body::after {
-    content: "";
+  .sw-tabbar {
+    display: flex;
     position: fixed;
-    background: var(--bg-color);
-    z-index: -1;
-  }
-  
-  body::before {
-    top: -100vh;
     left: 0;
     right: 0;
-    height: 100vh;
+    bottom: 0;
+    z-index: 50;
+    background: var(--canvas);
+    border-top: var(--rule-bold) solid var(--ink);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  
-  body::after {
-    bottom: -100vh;
-    left: 0;
-    right: 0;
-    height: 100vh;
+
+  /* With eight destinations, eight equal flex children squeeze each label
+     below a legible width on a narrow phone. Allow the bar to scroll
+     horizontally and give each tab a floor width instead, so labels stay
+     readable and the overflow is reachable by swipe. */
+  .sw-tabbar {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sw-tabbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sw-tab {
+    flex: 1 0 auto;
+    min-width: 4.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 3.75rem;
+    color: var(--ink-3);
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sw-tab i {
+    font-size: 1.0625rem;
+  }
+
+  .sw-tab[aria-current="page"] {
+    color: var(--ink);
+  }
+
+  .sw-tab:active {
+    background: var(--tint-1);
   }
 }
 
-/* Theme colors for different sections */
-.theme-blue {
-  --theme-color: var(--accent-blue);
-  --theme-bg: rgba(96, 165, 250, 0.2);
+/* ==========================================================================
+   Feature additions: flash banners, ordering controls, bell strip,
+   assignment lists (homework / exams), cancelled lessons.
+   Monochrome like the rest of the system — emphasis comes from weight,
+   rule style and the grayscale ramp, never from hue.
+   ========================================================================== */
+
+/* Write-outcome banners (lunch ordering, messaging). */
+.sw-flash {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 1.5rem 0 0;
+  padding: 0.875rem 1rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.sw-flash--ok {
+  background: var(--tint-1);
+  color: var(--ink);
+}
+.sw-flash--warn {
+  background: transparent;
+  color: var(--ink);
+  border-style: dashed;
+  border-width: var(--rule-bold);
 }
 
-.theme-green {
-  --theme-color: var(--accent-green);
-  --theme-bg: rgba(52, 211, 153, 0.2);
+/* A warning badge: dashed + bold rule rather than a colour. */
+.sw-badge--warn {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink-3);
+  border-style: dashed;
+  font-weight: 700;
 }
 
-.theme-yellow {
-  --theme-color: var(--accent-yellow);
-  --theme-bg: rgba(251, 191, 36, 0.2);
+/* Canteen ordering controls. */
+.sw-order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: var(--rule-hair) solid var(--rule);
+}
+.sw-order-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sw-order-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.sw-select {
+  max-width: 100%;
+  padding: 0.5rem 0.625rem;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: var(--rule-hair) solid var(--rule-2);
+  font-family: var(--font-text);
+  font-size: 0.875rem;
+}
+.sw-order-note {
+  width: 100%;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+.sw-order-note--locked {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: var(--rule-hair) solid var(--rule);
 }
 
-.theme-purple {
-  --theme-color: var(--accent-purple);
-  --theme-bg: rgba(167, 139, 250, 0.2);
+/* Next-bell strip on the timetable. */
+.sw-bell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
 }
 
-.theme-icon-badge {
-  background-color: var(--theme-bg);
-  color: var(--theme-color);
+/* Cancelled / event rows must never read as ordinary lessons. */
+.timetable-row.is-cancelled,
+.mobile-period-card.is-cancelled {
+  opacity: 0.55;
+}
+.timetable-row.is-cancelled .sw-period,
+.mobile-period-card.is-cancelled .mobile-period-number {
+  text-decoration: line-through;
+}
+.timetable-row.is-event,
+.mobile-period-card.is-event {
+  border-left: var(--rule-heavy) solid var(--rule-2);
+}
+.mobile-period-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+/* Assignment lists shared by /homework and /exams. */
+.sw-group + .sw-group {
+  margin-top: 1.5rem;
+}
+.sw-group-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+.sw-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sw-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+}
+.sw-item:last-child {
+  border-bottom: 0;
+}
+.sw-item--done {
+  opacity: 0.6;
+}
+.sw-item--warn {
+  border-left: var(--rule-heavy) solid var(--ink-3);
+  padding-left: 0.75rem;
+}
+.sw-item-icon {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+}
+.sw-item-body {
+  min-width: 0;
+}
+.sw-item-title {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.sw-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+.sw-item-text {
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+/* Desktop top-nav links. The bottom tab bar is phone-only, so without these
+   the newer pages have no clickable route on a wide screen. */
+.sw-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-left: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sw-nav-links a {
+  color: var(--ink-3);
+  text-decoration: none;
+}
+.sw-nav-links a:hover {
+  color: var(--ink);
+}
+@media (max-width: 768px) {
+  .sw-nav-links { display: none; }
 }

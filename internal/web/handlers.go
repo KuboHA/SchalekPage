@@ -2,10 +2,30 @@ package web
 
 import (
 	"net/http"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/KuboHA/SchalekPage/internal/edupage"
 )
+
+// runConcurrently runs each fn in its own goroutine and blocks until all
+// have returned. It exists because several page handlers need multiple
+// independent EduPage fetches per request (Students/Classes are answered
+// straight from the cached login payload, but MyTimetable, MealsFor and
+// TimetableChanges each make their own live HTTP round trip) — running them
+// one after another was adding their latencies together for no reason.
+func runConcurrently(fns ...func()) {
+	var wg sync.WaitGroup
+	wg.Add(len(fns))
+	for _, fn := range fns {
+		go func(fn func()) {
+			defer wg.Done()
+			fn()
+		}(fn)
+	}
+	wg.Wait()
+}
 
 // studentSummary is the minimal student info every protected page's navbar
 // needs. A nil *studentSummary means "unknown student", which templates
@@ -44,39 +64,63 @@ type dashboardPageData struct {
 // timetable/meals mini-cards.
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request, sess *Session) {
 	now := s.now()
-
-	students, err := sess.Client.Students()
-	if err != nil {
-		s.logger.Warn("dashboard: fetch students failed", "error", err)
-	}
-	student, studentOK := resolveStudent(students, sess.StudentID, sess.StudentName)
-
-	events, err := sess.Client.Notifications()
-	if err != nil {
-		s.logger.Warn("dashboard: fetch notifications failed", "error", err)
-	}
-	notifications := buildNotificationViews(events, baseURL(sess.Subdomain), now)
-
 	target := dashboardTargetDate(now)
-	tt, err := sess.Client.MyTimetable(target)
-	if err != nil {
-		s.logger.Warn("dashboard: fetch timetable failed", "error", err)
-	}
+
+	// Students() and Notifications() are answered from the login payload
+	// already sitting in memory, so they cost nothing. MyTimetable and
+	// MealsFor each make their own live request to EduPage; they don't
+	// depend on each other, so they run concurrently instead of back to
+	// back (sess.Client is safe for this — see edupage.Client's doc comment
+	// and its read-only-after-login field usage).
+	var (
+		students []edupage.Student
+		events   []edupage.TimelineEvent
+		tt       *edupage.Timetable
+		meals    *edupage.Meals
+	)
+	runConcurrently(
+		func() {
+			var err error
+			students, err = sess.Client.Students()
+			if err != nil {
+				s.logger.Warn("dashboard: fetch students failed", "error", err)
+			}
+		},
+		func() {
+			var err error
+			events, err = sess.Client.Notifications()
+			if err != nil {
+				s.logger.Warn("dashboard: fetch notifications failed", "error", err)
+			}
+		},
+		func() {
+			var err error
+			tt, err = sess.Client.MyTimetable(target)
+			if err != nil {
+				s.logger.Warn("dashboard: fetch timetable failed", "error", err)
+			}
+		},
+		func() {
+			var err error
+			meals, err = sess.Client.MealsFor(target)
+			if err != nil {
+				s.logger.Warn("dashboard: fetch meals failed", "error", err)
+			}
+		},
+	)
+
+	student, studentOK := resolveStudent(students, sess.StudentID, sess.StudentName)
+	notifications := buildNotificationViews(events, baseURL(sess.Subdomain), now)
 	var periods []periodView
 	if tt != nil {
 		periods = buildPeriodViews(tt.Lessons, false)
-	}
-
-	meals, err := sess.Client.MealsFor(target)
-	if err != nil {
-		s.logger.Warn("dashboard: fetch meals failed", "error", err)
 	}
 
 	s.render(w, r, "dashboard.html", dashboardPageData{
 		Student:       studentSummaryOrNil(student.Name, studentOK),
 		Notifications: notifications,
 		Timetable:     periods,
-		Meals:         buildMealViews(meals),
+		Meals:         buildMealViews(meals, now),
 		ShowTomorrow:  showTomorrow(now),
 	})
 }
@@ -88,6 +132,9 @@ type timetablePageData struct {
 	CurrentDate time.Time
 	PrevDate    time.Time
 	NextDate    time.Time
+	// NextBell is the school's next ringing time. It is answered from the
+	// cached login payload, so it adds no request to the page.
+	NextBell *ringingView
 }
 
 // handleTimetable serves GET /timetable/ and /timetable/{date}.
@@ -100,12 +147,6 @@ func (s *Server) handleTimetable(w http.ResponseWriter, r *http.Request, sess *S
 		s.logger.Warn("timetable: fetch students failed", "error", err)
 	}
 	student, studentOK := resolveStudent(students, sess.StudentID, sess.StudentName)
-	if !studentOK {
-		// app.py redirects to the login page when the student record can't
-		// be resolved at all.
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
 
 	tt, err := sess.Client.MyTimetable(current)
 	if err != nil {
@@ -116,12 +157,20 @@ func (s *Server) handleTimetable(w http.ResponseWriter, r *http.Request, sess *S
 		periods = buildPeriodViews(tt.Lessons, true)
 	}
 
+	// The bell schedule comes from the cached login payload, so this costs
+	// no extra request; a school that publishes none simply yields nil.
+	nextBell, err := sess.Client.NextRingingTime(now)
+	if err != nil {
+		s.logger.Warn("timetable: next ringing time failed", "error", err)
+	}
+
 	s.render(w, r, "timetable.html", timetablePageData{
-		Student:     studentSummaryOrNil(student.Name, true),
+		Student:     studentSummaryOrNil(student.Name, studentOK),
 		Timetable:   periods,
 		CurrentDate: current,
 		PrevDate:    current.AddDate(0, 0, -1),
 		NextDate:    current.AddDate(0, 0, 1),
+		NextBell:    buildRingingView(nextBell),
 	})
 }
 
@@ -133,6 +182,10 @@ type lunchesPageData struct {
 	PrevDate    time.Time
 	NextDate    time.Time
 	DateRange   []time.Time
+	// OK and Error carry the outcome of an ordering write back to the page
+	// after the POST/redirect/GET hop.
+	OK    string
+	Error string
 }
 
 // handleLunches serves GET /lunches/ and /lunches/{date}.
@@ -163,11 +216,13 @@ func (s *Server) handleLunches(w http.ResponseWriter, r *http.Request, sess *Ses
 
 	s.render(w, r, "lunches.html", lunchesPageData{
 		Student:     studentSummaryOrNil(student.Name, studentOK),
-		Meals:       buildMealViews(meals),
+		Meals:       buildMealViews(meals, now),
 		CurrentDate: current,
 		PrevDate:    current.AddDate(0, 0, -1),
 		NextDate:    current.AddDate(0, 0, 1),
 		DateRange:   dateRange,
+		OK:          r.URL.Query().Get("ok"),
+		Error:       r.URL.Query().Get("error"),
 	})
 }
 
@@ -175,9 +230,54 @@ func (s *Server) handleLunches(w http.ResponseWriter, r *http.Request, sess *Ses
 type gradesPageDataFull struct {
 	Student *studentSummary
 	gradesPageView
+
+	// Term/year switcher (feature 3): the term and school year actually
+	// used for this render, resolved from the "term"/"year" query params
+	// with a fallback to current-year/second-term when either is absent
+	// or unrecognised, so a bad or missing param never errors the page.
+	SelectedTerm edupage.Term
+	TermLabel    string
+	IsTermFirst  bool
+	IsTermSecond bool
+	SelectedYear int
+	PrevYear     int
+	NextYear     int
 }
 
-// handleGrades serves GET /grades.
+// defaultGradesTerm is handleGrades' fallback when "term" is absent or
+// unrecognised — the same term it used to hardcode.
+const defaultGradesTerm = edupage.TermSecond
+
+// parseTermQuery reads the "term" query parameter ("P1" or "P2"), falling
+// back to def for anything else (missing, empty, or an unrecognised
+// value) rather than erroring the page.
+func parseTermQuery(raw string, def edupage.Term) edupage.Term {
+	switch edupage.Term(raw) {
+	case edupage.TermFirst, edupage.TermSecond:
+		return edupage.Term(raw)
+	default:
+		return def
+	}
+}
+
+// parseYearQuery reads the "year" query parameter, falling back to def when
+// it is missing or not a plausible school year (EduPage itself has existed
+// since 2004, so anything outside a generous window is treated as noise
+// rather than a real request).
+func parseYearQuery(raw string, def int) int {
+	if raw == "" {
+		return def
+	}
+	year, err := strconv.Atoi(raw)
+	if err != nil || year < 2000 || year > 2100 {
+		return def
+	}
+	return year
+}
+
+// handleGrades serves GET /grades, optionally scoped by the "term"
+// (P1|P2) and "year" query params so first-term and previous-year grades,
+// already reachable via MCP, are reachable from the web UI too.
 func (s *Server) handleGrades(w http.ResponseWriter, r *http.Request, sess *Session) {
 	students, err := sess.Client.Students()
 	if err != nil {
@@ -185,11 +285,16 @@ func (s *Server) handleGrades(w http.ResponseWriter, r *http.Request, sess *Sess
 	}
 	student, studentOK := resolveStudent(students, sess.StudentID, sess.StudentName)
 
-	year, err := sess.Client.SchoolYear()
+	currentYear, err := sess.Client.SchoolYear()
 	if err != nil {
 		s.logger.Warn("grades: fetch school year failed", "error", err)
 	}
-	grades, err := sess.Client.GradesForTerm(year, edupage.TermSecond)
+
+	query := r.URL.Query()
+	term := parseTermQuery(query.Get("term"), defaultGradesTerm)
+	year := parseYearQuery(query.Get("year"), currentYear)
+
+	grades, err := sess.Client.GradesForTerm(year, term)
 	if err != nil {
 		s.logger.Warn("grades: fetch grades failed", "error", err)
 	}
@@ -197,6 +302,13 @@ func (s *Server) handleGrades(w http.ResponseWriter, r *http.Request, sess *Sess
 	s.render(w, r, "grades.html", gradesPageDataFull{
 		Student:        studentSummaryOrNil(student.Name, studentOK),
 		gradesPageView: buildGradesPageView(grades),
+		SelectedTerm:   term,
+		TermLabel:      termLabel(term),
+		IsTermFirst:    term == edupage.TermFirst,
+		IsTermSecond:   term == edupage.TermSecond,
+		SelectedYear:   year,
+		PrevYear:       year - 1,
+		NextYear:       year + 1,
 	})
 }
 

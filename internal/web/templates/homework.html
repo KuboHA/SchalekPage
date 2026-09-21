@@ -1,0 +1,86 @@
+{{define "homework.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "swisshead" "Homework"}}
+</head>
+<body class="mobile-safe-bottom has-tabbar" data-nav="homework">
+{{template "swissnav" .}}
+
+<main class="sw-shell sw-shell--narrow">
+    <a href="/dashboard" class="back-button" style="margin-top:1.5rem">
+        <span class="icon"><i class="fas fa-chevron-left" aria-hidden="true"></i></span>
+        <span>Dashboard</span>
+    </a>
+
+    <header class="sw-head">
+        <div>
+            <p class="sw-eyebrow">Assignments</p>
+            <h1 class="sw-title">Home&shy;work</h1>
+        </div>
+        <div class="sw-stat">
+            <span class="sw-eyebrow">Outstanding</span>
+            <span class="sw-stat-value">{{.OutstandingTotal}}</span>
+        </div>
+    </header>
+
+    {{if .Groups}}
+        <div class="sw-subjects">
+            {{range .Groups}}
+                <section class="sw-subject">
+                    <div class="sw-subject-head">
+                        <h2 class="sw-subject-name">
+                            {{if .HasDueDate}}
+                                {{dateLong .DueDate}}
+                            {{else}}
+                                No due date
+                            {{end}}
+                            {{if .IsPastDue}}<span class="sw-badge sw-badge--solid" style="margin-left:.5rem">Past due</span>{{end}}
+                        </h2>
+                        <div class="sw-subject-avg">
+                            {{if gt .OutstandingN 0}}<span class="sw-badge sw-badge--strong">{{.OutstandingN}} outstanding</span>{{end}}
+                            {{if gt .DoneN 0}}<span class="sw-badge sw-badge--fill">{{.DoneN}} done</span>{{end}}
+                        </div>
+                    </div>
+
+                    <ol class="sw-grade-list">
+                        {{range .Items}}
+                            <li class="sw-grade-row">
+                                <span class="sw-badge {{if .IsDone}}sw-badge--fill{{else}}sw-badge--strong{{end}}"
+                                      title="Read-only status &mdash; EduPage has no way to mark homework done here">
+                                    {{if .IsDone}}
+                                        <i class="fa-solid fa-check" aria-hidden="true"></i> Done
+                                    {{else}}
+                                        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Outstanding
+                                    {{end}}
+                                </span>
+
+                                <div class="sw-grade-body">
+                                    <p class="sw-grade-title">{{.Title}}</p>
+                                    {{if .HasDoneAt}}
+                                        <p class="sw-grade-note">Completed {{dateDMY .DoneAt}}</p>
+                                    {{end}}
+                                </div>
+
+                                <div class="sw-grade-meta">
+                                    <span class="sw-badge sw-badge--quiet"><i class="fa-solid {{.IconClass}}" aria-hidden="true"></i> {{.TypeName}}</span>
+                                    {{if .AuthorName}}<span>{{.AuthorName}}</span>{{end}}
+                                </div>
+                            </li>
+                        {{end}}
+                    </ol>
+                </section>
+            {{end}}
+        </div>
+    {{else}}
+        <div class="sw-empty">
+            <i class="fas fa-book-open" aria-hidden="true"></i>
+            <h3>No homework found</h3>
+            <p>Nothing has been assigned recently.</p>
+        </div>
+    {{end}}
+</main>
+
+{{template "swissthemejs"}}
+{{template "swisstabbar"}}
+</body>
+</html>{{end}}

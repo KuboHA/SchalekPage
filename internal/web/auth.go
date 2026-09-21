@@ -2,8 +2,21 @@ package web
 
 import (
 	"net/http"
+	"strings"
 	"time"
 )
+
+// isRequestSecure reports whether the request reached us over HTTPS, either
+// directly (r.TLS) or as reported by a terminating reverse proxy via the
+// conventional X-Forwarded-Proto header. Without this, a deployment behind
+// nginx/Caddy would always see r.TLS == nil and never set the Secure cookie
+// flag, even though the browser is talking to it over HTTPS.
+func isRequestSecure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+}
 
 // setSessionCookie writes the HttpOnly, SameSite=Lax session cookie.
 func setSessionCookie(w http.ResponseWriter, r *http.Request, id string) {
@@ -13,7 +26,7 @@ func setSessionCookie(w http.ResponseWriter, r *http.Request, id string) {
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   r.TLS != nil,
+		Secure:   isRequestSecure(r),
 		MaxAge:   int(sessionIdleTimeout / time.Second),
 	})
 }

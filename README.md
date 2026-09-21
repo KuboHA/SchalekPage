@@ -15,6 +15,7 @@ It is written in **Go**, with no third-party dependencies, and compiles to a sin
 - **Meals module** listing ordered snacks, lunches, and afternoon snacks.
 - **Substitution changes** filtered to the logged-in student's class and normalized for friendly display.
 - **Grades overview** (term-based) with newest grades first.
+- **MCP server** (`POST /mcp`) exposing grades, timetable, lunches, substitutions, notifications and student info as tools for MCP-compatible agents (e.g. Claude), authenticated via a built-in OAuth 2.1 authorization server (see below).
 
 ## 📁 Project Structure
 
@@ -73,15 +74,40 @@ Plain `go build ./cmd/schalekpage` works too; you only lose the version stamp.
 ## ▶️ Running the App
 
 ```bash
-./schalekpage            # listens on :5000
+./schalekpage                              # plain HTTP, listens on :5000
 ./schalekpage -addr :8080
 ./schalekpage -version
+
+# Automatic HTTPS (Let's Encrypt) for a public domain:
+./schalekpage -domain schalekpage.example.com
+
+# Behind a reverse proxy (e.g. Caddy) that already terminates TLS:
+./schalekpage -domain schalekpage.example.com -no-cert -addr :5000
 ```
 
 Open the printed URL in your browser and log in with your EduPage credentials.
 
+| flag | default | meaning |
+| --- | --- | --- |
+| `-addr` | `:5000` | plain HTTP listen address — used as-is when `-domain` is unset or `-no-cert` is set, and otherwise doubles as the ACME HTTP-01/redirect port |
+| `-domain` | *(unset)* | public domain name; when set (and `-no-cert` is not), enables automatic TLS via Let's Encrypt |
+| `-https-addr` | `:443` | HTTPS listen address, only used when automatic TLS is enabled |
+| `-no-cert` | `false` | serve plain HTTP even with `-domain` set, for deployments behind a reverse proxy that already handles TLS |
+| `-cert-cache` | `certs` | directory used to cache automatically obtained TLS certificates |
+
 ### Two-Factor Authentication
 If your EduPage account uses 2FA, you are redirected to `/two_factor` to supply the verification code.
+
+### MCP server (agents like Claude)
+
+SchalekPage exposes a remote [MCP](https://modelcontextprotocol.io) server at `POST /mcp`, letting an MCP-compatible agent read your EduPage data (grades, timetable, lunches, substitutions, notifications) as tools. It's authenticated with a self-contained OAuth 2.1 authorization server — no separate account system: "signing in" to the MCP client *is* your EduPage login (with 2FA if enabled).
+
+1. Point your MCP client (e.g. Claude) at `https://<your-host>/mcp`.
+2. It discovers the auth server via `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`, registers itself dynamically (RFC 7591), then opens `/oauth/authorize` in a browser.
+3. Sign in with your EduPage credentials (and 2FA code, if prompted) exactly as you would for the dashboard.
+4. The client exchanges the resulting code (PKCE, S256 only) for a bearer access token and can now call tools: `get_student_info`, `get_grades`, `get_timetable`, `get_lunches`, `get_substitutions`, `get_notifications`.
+
+Tokens and sessions are in-memory only (see Security Notes) and expire after 12 hours of inactivity, same as the dashboard.
 
 ## 💡 Usage Tips
 

@@ -1,0 +1,72 @@
+{{define "exams.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "swisshead" "Exams"}}
+</head>
+<body class="mobile-safe-bottom has-tabbar" data-nav="exams">
+{{template "swissnav" .}}
+
+<main class="sw-shell sw-shell--narrow">
+    <a href="/dashboard" class="back-button" style="margin-top:1.5rem">
+        <span class="icon"><i class="fas fa-chevron-left" aria-hidden="true"></i></span>
+        <span>Dashboard</span>
+    </a>
+
+    <header class="sw-head">
+        <div>
+            <p class="sw-eyebrow">Tests &amp; Exams</p>
+            <h1 class="sw-title">Exams</h1>
+        </div>
+    </header>
+
+    <section>
+        <div class="sw-section-title"><span>Upcoming</span></div>
+        {{if .Upcoming}}
+            <ol class="sw-grade-list">
+                {{range .Upcoming}}
+                    <li class="sw-grade-row">
+                        <span class="sw-badge sw-badge--strong"><i class="fa-solid {{.IconClass}}" aria-hidden="true"></i> {{.TypeName}}</span>
+                        <div class="sw-grade-body">
+                            <p class="sw-grade-title">{{.Title}}</p>
+                            {{if .AuthorName}}<p class="sw-grade-note">{{.AuthorName}}</p>{{end}}
+                        </div>
+                        <div class="sw-grade-meta">
+                            <span class="sw-num">{{dateLong .Date}}</span>
+                        </div>
+                    </li>
+                {{end}}
+            </ol>
+        {{else}}
+            <div class="sw-empty">
+                <i class="fas fa-vial" aria-hidden="true"></i>
+                <h3>No upcoming exams</h3>
+                <p>Nothing has been scheduled yet.</p>
+            </div>
+        {{end}}
+    </section>
+
+    {{if .Past}}
+        <section style="margin-top:2.5rem">
+            <div class="sw-section-title"><span>Past</span></div>
+            <ol class="sw-grade-list">
+                {{range .Past}}
+                    <li class="sw-grade-row" style="opacity:.6">
+                        <span class="sw-badge sw-badge--quiet"><i class="fa-solid {{.IconClass}}" aria-hidden="true"></i> {{.TypeName}}</span>
+                        <div class="sw-grade-body">
+                            <p class="sw-grade-title">{{.Title}}</p>
+                            {{if .AuthorName}}<p class="sw-grade-note">{{.AuthorName}}</p>{{end}}
+                        </div>
+                        <div class="sw-grade-meta">
+                            <span class="sw-num">{{dateLong .Date}}</span>
+                        </div>
+                    </li>
+                {{end}}
+            </ol>
+        </section>
+    {{end}}
+</main>
+
+{{template "swissthemejs"}}
+{{template "swisstabbar"}}
+</body>
+</html>{{end}}

@@ -1,18 +1,50 @@
 {{define "two_factor.html"}}<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Two-Factor Authentication</title>
+{{template "swisshead" "Two-factor authentication"}}
 </head>
-<body>
-    <h1>Two-Factor Authentication</h1>
-    {{if .Error}}
-        <p style="color: red;">{{.Error}}</p>
-    {{end}}
-    <form method="POST" action="/two_factor">
-        <label for="code">2FA Code:</label>
-        <input type="text" id="code" name="code" required><br>
-        <button type="submit">Submit</button>
-    </form>
+<body class="sw-auth">
+    <div class="sw-auth-bar">
+        <span class="sw-brand">Schalek<span>Page</span></span>
+        {{template "swisstheme"}}
+    </div>
+
+    <main class="sw-auth-main">
+        <div class="sw-auth-col">
+            <p class="sw-eyebrow">Step two</p>
+            <h1 class="sw-auth-title">Verify</h1>
+            <p class="sw-auth-lede">
+                Enter the code EduPage sent to your device to finish signing in.
+            </p>
+        </div>
+
+        <div class="sw-auth-col sw-auth-col--form">
+            <div class="sw-section-title">
+                <span>Two-factor code</span>
+                <span class="sw-num">02</span>
+            </div>
+
+            {{if .Error}}
+                <div class="sw-notice" role="alert">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                    <p>{{.Error}}</p>
+                </div>
+            {{end}}
+
+            <form method="POST" action="/two_factor" novalidate>
+                <div class="sw-field">
+                    <label class="sw-label" for="code">Code</label>
+                    <input class="sw-input sw-input--code" type="text" id="code" name="code"
+                           inputmode="numeric" autocomplete="one-time-code"
+                           autocapitalize="none" spellcheck="false" autofocus required>
+                </div>
+
+                <button type="submit" class="sw-btn sw-btn--solid sw-btn--block">Verify</button>
+            </form>
+
+            <p class="sw-auth-foot"><a href="/" class="sw-link">Back to sign in</a></p>
+        </div>
+    </main>
+{{template "swissthemejs"}}
 </body>
 </html>{{end}}

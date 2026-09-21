@@ -153,6 +153,70 @@ func (c *Client) do(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
+// hasReloadKey reports whether a raw JSON response body signals a stale
+// Client.GsecHash() by carrying a "reload" key in place of the expected
+// payload — EduPage's way of signalling this instead of an HTTP error
+// status. A "reload" key that is explicitly `false` or `null` does not
+// count (mirrors the Python reference's `.get("reload") is not None`, with
+// an added allowance for an explicit `false`); any other present value
+// does. It returns false, without error, for a body that isn't a JSON
+// object at all — callers should have already handled a transport error by
+// that point.
+func hasReloadKey(body []byte) bool {
+	var probe map[string]any
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return false
+	}
+	v, ok := probe["reload"]
+	if !ok || v == nil {
+		return false
+	}
+	if b, isBool := v.(bool); isBool {
+		return b
+	}
+	return true
+}
+
+// withSessionRecovery runs fetch once. If its result trips detectReload —
+// meaning the endpoint reported a stale gsecHash — it transparently re-runs
+// Restore to refresh Client.GsecHash() and retries fetch exactly once more.
+// If the retry still trips detectReload (or Restore itself fails), it
+// returns an error wrapping ErrSessionExpired. fetch is called at most
+// twice, however detectReload is defined, so this never recurses.
+func (c *Client) withSessionRecovery(fetch func() ([]byte, error), detectReload func([]byte) bool) ([]byte, error) {
+	restore := func() error {
+		return c.Restore(c.subdomain, c.SessionID(), c.username)
+	}
+	return retryOnReload(fetch, detectReload, restore)
+}
+
+// retryOnReload is the pure retry engine behind Client.withSessionRecovery:
+// restore is taken as a parameter (rather than hardcoded to Client.Restore)
+// purely so this logic — retry-at-most-once, give up with ErrSessionExpired
+// — can be unit tested without a live EduPage session.
+func retryOnReload(fetch func() ([]byte, error), detectReload func([]byte) bool, restore func() error) ([]byte, error) {
+	body, err := fetch()
+	if err != nil {
+		return nil, err
+	}
+	if !detectReload(body) {
+		return body, nil
+	}
+
+	if err := restore(); err != nil {
+		return nil, fmt.Errorf("session expired and could not be refreshed: %w: %v", ErrSessionExpired, err)
+	}
+
+	body, err = fetch()
+	if err != nil {
+		return nil, err
+	}
+	if detectReload(body) {
+		return nil, fmt.Errorf("session still expired after refresh: %w", ErrSessionExpired)
+	}
+	return body, nil
+}
+
 // --- defensive JSON helpers ---
 //
 // EduPage's JSON responses are famously loose about types: numbers may be

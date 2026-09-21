@@ -31,6 +31,8 @@ func (c *Client) Notifications() ([]TimelineEvent, error) {
 		return nil, nil
 	}
 
+	userProps := asMap(data["userProps"])
+
 	events := make([]TimelineEvent, 0, len(rawItems))
 	for _, raw := range rawItems {
 		item := pickMap(raw)
@@ -38,7 +40,7 @@ func (c *Client) Notifications() ([]TimelineEvent, error) {
 			continue
 		}
 
-		event, ok := parseTimelineItem(item)
+		event, ok := parseTimelineItem(item, userProps)
 		if !ok {
 			continue
 		}
@@ -50,9 +52,13 @@ func (c *Client) Notifications() ([]TimelineEvent, error) {
 }
 
 // parseTimelineItem parses a single raw timeline entry as returned by
-// EduPage. It returns ok=false when the entry has no usable timeline id and
-// should be skipped, mirroring the Python reference.
-func parseTimelineItem(item map[string]any) (TimelineEvent, bool) {
+// EduPage. userProps is the per-user, per-event state map (`userProps` in the
+// login payload, `timelineUserProps` in a history response), keyed by the
+// event's timelineid; it may be nil, in which case the derived state fields
+// are simply left at their zero values. parseTimelineItem returns ok=false
+// when the entry has no usable timeline id and should be skipped, mirroring
+// the Python reference.
+func parseTimelineItem(item map[string]any, userProps map[string]any) (TimelineEvent, bool) {
 	idStr := strings.TrimSpace(pickString(item["timelineid"]))
 	if idStr == "" {
 		return TimelineEvent{}, false
@@ -86,7 +92,7 @@ func parseTimelineItem(item map[string]any) (TimelineEvent, bool) {
 		}
 	}
 
-	return TimelineEvent{
+	event := TimelineEvent{
 		EventID:        eventID,
 		Timestamp:      timestamp,
 		Text:           text,
@@ -94,7 +100,33 @@ func parseTimelineItem(item map[string]any) (TimelineEvent, bool) {
 		RecipientName:  pickString(item["user_meno"]),
 		EventType:      pickString(item["typ"]),
 		AdditionalData: additionalData,
-	}, true
+	}
+
+	// Reaction count and creation/removal state live on the raw event itself,
+	// not in the per-user state map.
+	if n, ok := pickInt(item["pocet_reakcii"]); ok {
+		event.ReactionCount = n
+	}
+	if cas := pickString(item["cas_pridania"]); cas != "" {
+		if parsed, err := time.Parse(eduTimeLayout, cas); err == nil {
+			event.CreatedAt = &parsed
+		}
+	}
+	event.IsRemoved = pickBool(item["removed"])
+
+	// Starred/done state, in contrast, is per-user and lives in userProps,
+	// keyed by this event's timelineid.
+	if state := pickMap(userProps[idStr]); state != nil {
+		event.IsStarred = pickBool(state["starred"])
+		if doneAt := pickString(state["doneMaxCas"]); doneAt != "" {
+			if parsed, err := time.Parse(eduTimeLayout, doneAt); err == nil {
+				event.DoneAt = &parsed
+				event.IsDone = true
+			}
+		}
+	}
+
+	return event, true
 }
 
 // decodeAdditionalData decodes a timeline entry's "data" field, which

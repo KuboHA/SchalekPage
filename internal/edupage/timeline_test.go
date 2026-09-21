@@ -61,7 +61,7 @@ func TestParseTimelineItem(t *testing.T) {
 			"vlastnik_meno": "John Teacher",
 		}
 
-		event, ok := parseTimelineItem(item)
+		event, ok := parseTimelineItem(item, nil)
 		if !ok {
 			t.Fatal("expected ok=true")
 		}
@@ -89,7 +89,7 @@ func TestParseTimelineItem(t *testing.T) {
 			"text":       "",
 		}
 
-		event, ok := parseTimelineItem(item)
+		event, ok := parseTimelineItem(item, nil)
 		if !ok {
 			t.Fatal("expected ok=true")
 		}
@@ -107,7 +107,7 @@ func TestParseTimelineItem(t *testing.T) {
 			"text":       "Dôležitá správa: something",
 		}
 
-		event, ok := parseTimelineItem(item)
+		event, ok := parseTimelineItem(item, nil)
 		if !ok {
 			t.Fatal("expected ok=true")
 		}
@@ -117,16 +117,104 @@ func TestParseTimelineItem(t *testing.T) {
 	})
 
 	t.Run("missing timelineid is skipped", func(t *testing.T) {
-		_, ok := parseTimelineItem(map[string]any{"typ": "sprava"})
+		_, ok := parseTimelineItem(map[string]any{"typ": "sprava"}, nil)
 		if ok {
 			t.Fatal("expected ok=false for missing timelineid")
 		}
 	})
 
 	t.Run("non-numeric timelineid is skipped", func(t *testing.T) {
-		_, ok := parseTimelineItem(map[string]any{"timelineid": "not-a-number"})
+		_, ok := parseTimelineItem(map[string]any{"timelineid": "not-a-number"}, nil)
 		if ok {
 			t.Fatal("expected ok=false for non-numeric timelineid")
+		}
+	})
+
+	t.Run("raw event state: reactions, creation and removal", func(t *testing.T) {
+		item := map[string]any{
+			"timelineid":    "99",
+			"typ":           "sprava",
+			"text":          "hi",
+			"pocet_reakcii": "3",
+			"cas_pridania":  "2024-05-01 10:00:00",
+			"removed":       "1",
+		}
+
+		event, ok := parseTimelineItem(item, nil)
+		if !ok {
+			t.Fatal("expected ok=true")
+		}
+		if event.ReactionCount != 3 {
+			t.Errorf("ReactionCount = %d, want 3", event.ReactionCount)
+		}
+		if event.CreatedAt == nil || !event.CreatedAt.Equal(time.Date(2024, 5, 1, 10, 0, 0, 0, time.UTC)) {
+			t.Errorf("CreatedAt = %v, want 2024-05-01 10:00:00", event.CreatedAt)
+		}
+		if !event.IsRemoved {
+			t.Error("expected IsRemoved=true")
+		}
+	})
+
+	t.Run("userProps state: starred and done", func(t *testing.T) {
+		item := map[string]any{
+			"timelineid": "99",
+			"typ":        "homework",
+			"text":       "hi",
+		}
+		userProps := map[string]any{
+			"99": map[string]any{
+				"starred":    "1",
+				"doneMaxCas": "2024-05-02 09:00:00",
+			},
+		}
+
+		event, ok := parseTimelineItem(item, userProps)
+		if !ok {
+			t.Fatal("expected ok=true")
+		}
+		if !event.IsStarred {
+			t.Error("expected IsStarred=true")
+		}
+		if !event.IsDone {
+			t.Error("expected IsDone=true")
+		}
+		if event.DoneAt == nil || !event.DoneAt.Equal(time.Date(2024, 5, 2, 9, 0, 0, 0, time.UTC)) {
+			t.Errorf("DoneAt = %v, want 2024-05-02 09:00:00", event.DoneAt)
+		}
+	})
+
+	t.Run("userProps state: not done, not starred when absent for this event", func(t *testing.T) {
+		item := map[string]any{
+			"timelineid": "5",
+			"typ":        "homework",
+			"text":       "hi",
+		}
+		userProps := map[string]any{
+			"99": map[string]any{"starred": "1"},
+		}
+
+		event, ok := parseTimelineItem(item, userProps)
+		if !ok {
+			t.Fatal("expected ok=true")
+		}
+		if event.IsStarred || event.IsDone || event.DoneAt != nil {
+			t.Errorf("expected zero-value state, got %#v", event)
+		}
+	})
+
+	t.Run("nil userProps leaves state at zero value", func(t *testing.T) {
+		item := map[string]any{
+			"timelineid": "1",
+			"typ":        "sprava",
+			"text":       "hi",
+		}
+
+		event, ok := parseTimelineItem(item, nil)
+		if !ok {
+			t.Fatal("expected ok=true")
+		}
+		if event.IsStarred || event.IsDone {
+			t.Errorf("expected zero-value state, got %#v", event)
 		}
 	})
 }

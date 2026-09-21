@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -43,55 +44,72 @@ type gradesPageView struct {
 	OverallCls string
 }
 
-// gradeColorClass returns the Tailwind classes app.py's grades.html used for
-// a 1-5 style grade badge.
+// Grade badges are rendered as five steps of a grayscale ramp (see the
+// .sw-grade rules in static/css/main.css): level 1 is a solid inverted
+// block, level 5 a heavy hairline outline. Severity therefore survives the
+// grayscale palette without relying on hue, which also keeps the badges
+// legible for readers who can't distinguish red from green.
+func gradeStep(level int) string {
+	return fmt.Sprintf("sw-grade sw-grade--%d", level)
+}
+
+// gradeColorClass maps a 1-5 style grade onto that ramp, best to worst.
 func gradeColorClass(n float64) string {
 	switch {
 	case n >= 5:
-		return "bg-red-500/20 text-red-400"
+		return gradeStep(5)
 	case n >= 4:
-		return "bg-orange-500/20 text-orange-400"
+		return gradeStep(4)
 	case n >= 3:
-		return "bg-yellow-500/20 text-yellow-400"
+		return gradeStep(3)
 	case n >= 2:
-		return "bg-blue-500/20 text-blue-400"
+		return gradeStep(2)
 	case n >= 1:
-		return "bg-green-500/20 text-green-400"
+		return gradeStep(1)
 	default:
-		return "bg-gray-700/50 text-gray-300"
+		return "sw-grade sw-grade--none"
 	}
 }
 
-// percentColorClass mirrors the percent-based badge coloring in grades.html.
+// percentColorClass maps a percentage onto the same ramp. Note the
+// inversion: a high percentage is good, a high grade number is not.
 func percentColorClass(percent float64) string {
 	switch {
 	case percent >= 90:
-		return "bg-green-500/20 text-green-400"
+		return gradeStep(1)
 	case percent >= 75:
-		return "bg-blue-500/20 text-blue-400"
+		return gradeStep(2)
 	case percent >= 50:
-		return "bg-yellow-500/20 text-yellow-400"
+		return gradeStep(3)
 	default:
-		return "bg-red-500/20 text-red-400"
+		return gradeStep(5)
 	}
 }
 
-// averageBadgeClass mirrors the subject/overall average badge coloring.
+// averageBadgeClass maps a subject or overall average onto the ramp.
 func averageBadgeClass(avg float64) string {
 	switch {
 	case avg >= 4:
-		return "bg-red-500/20 text-red-400 shadow-red-500/10"
+		return gradeStep(5)
 	case avg >= 3:
-		return "bg-yellow-500/20 text-yellow-400 shadow-yellow-500/10"
+		return gradeStep(4)
 	case avg >= 2:
-		return "bg-blue-500/20 text-blue-400 shadow-blue-500/10"
+		return gradeStep(3)
 	default:
-		return "bg-green-500/20 text-green-400 shadow-green-500/10"
+		return gradeStep(1)
 	}
 }
 
 func round2(f float64) float64 {
 	return math.Round(f*100) / 100
+}
+
+// termLabel renders an edupage.Term for the page eyebrow.
+func termLabel(t edupage.Term) string {
+	if t == edupage.TermFirst {
+		return "First term"
+	}
+	return "Second term"
 }
 
 // gradeNumeric parses a Grade's GradeN field as a float, ignoring verbal

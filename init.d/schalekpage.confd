@@ -1,0 +1,28 @@
+# /etc/conf.d/schalekpage — configuration for the schalekpage OpenRC service.
+
+# Path to the compiled binary.
+#SCHALEKPAGE_BIN=/usr/local/bin/schalekpage
+
+# User/group the service runs as.
+#SCHALEKPAGE_USER=schalekpage
+#SCHALEKPAGE_GROUP=schalekpage
+
+# Directory for state (TLS cert cache, etc).
+#SCHALEKPAGE_DIR=/var/lib/schalekpage
+
+# Plain HTTP listen address. Used directly when SCHALEKPAGE_DOMAIN is unset,
+# or for the ACME HTTP-01 challenge / redirect when it is set.
+#SCHALEKPAGE_ADDR=:5000
+
+# HTTPS listen address, used only when SCHALEKPAGE_DOMAIN is set and
+# SCHALEKPAGE_NO_CERT is unset.
+#SCHALEKPAGE_HTTPS_ADDR=:443
+
+# Public domain name. Setting this enables automatic Let's Encrypt TLS
+# unless SCHALEKPAGE_NO_CERT is also set. Leave empty to serve plain HTTP
+# only (e.g. behind a reverse proxy such as Caddy or nginx).
+#SCHALEKPAGE_DOMAIN=
+
+# Set to "1" to force plain HTTP even when SCHALEKPAGE_DOMAIN is set
+# (for deployments behind a TLS-terminating reverse proxy).
+#SCHALEKPAGE_NO_CERT=

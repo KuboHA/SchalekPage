@@ -88,10 +88,55 @@ func classroomsByID(c *Client) (map[string]Classroom, error) {
 // dayPlan fetches and decodes the raw "plan" array for day from EduPage's
 // day-plan endpoint. It mirrors Timetables.__get_date_plan from the Python
 // reference: first a GET to scrape a "gpid"/"gsh" pair out of an HTML page,
-// then a POST whose JS-ish response embeds the actual plan as JSON.
+// then a POST whose JS-ish response embeds the actual plan as JSON. When
+// that response carries a "reload" key instead of a plan — EduPage's way of
+// signalling a stale session — it transparently refreshes the session and
+// retries once; see Client.withSessionRecovery.
 //
 // It returns (nil, nil) when the response doesn't contain data for day.
 func (c *Client) dayPlan(day time.Time) ([]any, error) {
+	fetch := func() ([]byte, error) {
+		return c.fetchDayPlanRaw(day)
+	}
+	detectReload := func(body []byte) bool {
+		jsonPart, ok := extractDayPlanJSON(string(body), c.UserID())
+		return ok && hasReloadKey([]byte(jsonPart))
+	}
+
+	body, err := c.withSessionRecovery(fetch, detectReload)
+	if err != nil {
+		return nil, fmt.Errorf("edupage: fetch timetable data: %w", err)
+	}
+
+	jsonPart, ok := extractDayPlanJSON(string(body), c.UserID())
+	if !ok {
+		// Response didn't have the expected shape; treat as "no data".
+		return nil, nil
+	}
+
+	var payload struct {
+		Dates map[string]struct {
+			Plan []any `json:"plan"`
+		} `json:"dates"`
+	}
+	if err := json.Unmarshal([]byte(jsonPart), &payload); err != nil {
+		return nil, fmt.Errorf("edupage: decode timetable payload: %w", err)
+	}
+
+	dayData, ok := payload.Dates[day.Format(eduDateLayout)]
+	if !ok {
+		return nil, nil
+	}
+
+	return dayData.Plan, nil
+}
+
+// fetchDayPlanRaw performs the GET+POST pair that produces the raw /gcall
+// response for day. It scrapes a fresh "gpid"/"gsh" CSRF pair from the HTML
+// page on every call (that pair is single-use and page-local, unrelated to
+// Client.GsecHash), which is what makes it safe for dayPlan to call this
+// twice on a session-recovery retry.
+func (c *Client) fetchDayPlanRaw(day time.Time) ([]byte, error) {
 	csrfBody, err := c.Get("/dashboard/eb.php?mode=ttday")
 	if err != nil {
 		return nil, fmt.Errorf("edupage: fetch timetable page: %w", err)
@@ -123,32 +168,7 @@ func (c *Client) dayPlan(day time.Time) ([]any, error) {
 		"_LJSL":   {"4096"},
 	}
 
-	body, err := c.PostForm("/gcall", values)
-	if err != nil {
-		return nil, fmt.Errorf("edupage: fetch timetable data: %w", err)
-	}
-
-	jsonPart, ok := extractDayPlanJSON(string(body), c.UserID())
-	if !ok {
-		// Response didn't have the expected shape; treat as "no data".
-		return nil, nil
-	}
-
-	var payload struct {
-		Dates map[string]struct {
-			Plan []any `json:"plan"`
-		} `json:"dates"`
-	}
-	if err := json.Unmarshal([]byte(jsonPart), &payload); err != nil {
-		return nil, fmt.Errorf("edupage: decode timetable payload: %w", err)
-	}
-
-	dayData, ok := payload.Dates[day.Format(eduDateLayout)]
-	if !ok {
-		return nil, nil
-	}
-
-	return dayData.Plan, nil
+	return c.PostForm("/gcall", values)
 }
 
 // extractDayPlanJSON pulls the JSON object out of the gcall response, which
@@ -253,6 +273,15 @@ func parseTimetablePlan(
 			}
 		}
 
+		for _, raw := range pickSlice(item["groupnames"]) {
+			if g := pickString(raw); g != "" {
+				lesson.Groups = append(lesson.Groups, g)
+			}
+		}
+
+		lesson.IsCancelled = truthy(item["removed"]) || isLessonType(item, "absent") || isLessonType(item, "")
+		lesson.IsEvent = isLessonType(item, "event") || isLessonType(item, "out") || truthy(item["main"])
+
 		lessons = append(lessons, lesson)
 	}
 
@@ -281,6 +310,46 @@ func combineDayTime(day time.Time, hhmm string) time.Time {
 	}
 
 	return time.Date(day.Year(), day.Month(), day.Day(), h, m, 0, 0, day.Location())
+}
+
+// isLessonType reports whether the raw day-plan entry's "type" field is
+// present and equal to want. A missing "type" key never matches — even when
+// want is "" — mirroring the Python reference's `lesson.get("type") ==
+// want`, which compares against None (not an empty string) when the key is
+// absent, so ordinary lessons without a "type" field are never mistaken for
+// cancelled ones.
+func isLessonType(item map[string]any, want string) bool {
+	raw, has := item["type"]
+	if !has {
+		return false
+	}
+	s, ok := raw.(string)
+	return ok && s == want
+}
+
+// truthy mirrors Python truthiness for a raw EduPage JSON value: nil, false,
+// zero, "", "0" and empty containers are all falsy; everything else
+// (including a non-empty object/array) is truthy. It backs the
+// IsCancelled/IsEvent "removed"/"main" checks, whose exact JSON
+// representation (bool, numeric or string) EduPage does not keep consistent
+// across schools.
+func truthy(v any) bool {
+	switch t := v.(type) {
+	case nil:
+		return false
+	case bool:
+		return t
+	case float64:
+		return t != 0
+	case string:
+		return t != "" && t != "0"
+	case map[string]any:
+		return len(t) > 0
+	case []any:
+		return len(t) > 0
+	default:
+		return true
+	}
 }
 
 // extractCurriculum ports the Python reference's curriculum lookup:

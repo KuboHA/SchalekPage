@@ -1,6 +1,8 @@
 package edupage
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 )
@@ -130,6 +132,188 @@ func TestExtractDayMeals_NoDataForDay(t *testing.T) {
 	}
 }
 
+func TestParseMealPopulatesWriteFields(t *testing.T) {
+	day := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
+	future := time.Now().Add(24 * time.Hour).Format(eduTimeLayout)
+
+	raw := map[string]any{
+		"nazov":   "Obed",
+		"zmen_do": future,
+	}
+
+	m := parseMeal("2", raw, "999", day)
+	if m == nil {
+		t.Fatal("expected non-nil meal")
+	}
+	if m.BoarderID != "999" {
+		t.Errorf("BoarderID = %q, want %q", m.BoarderID, "999")
+	}
+	if m.MealIndex != "2" {
+		t.Errorf("MealIndex = %q, want %q", m.MealIndex, "2")
+	}
+	if m.CanBeChangedUntil == nil {
+		t.Fatal("expected non-nil CanBeChangedUntil")
+	}
+	if !m.CanBeChanged {
+		t.Error("expected CanBeChanged = true for a future deadline")
+	}
+}
+
+func TestMenuLetter(t *testing.T) {
+	cases := []struct {
+		n       int
+		want    string
+		wantErr bool
+	}{
+		{1, "A", false},
+		{2, "B", false},
+		{8, "H", false},
+		{0, "", true},
+		{9, "", true},
+		{-1, "", true},
+	}
+	for _, tc := range cases {
+		got, err := menuLetter(tc.n)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("menuLetter(%d): expected error, got %q", tc.n, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("menuLetter(%d): unexpected error: %v", tc.n, err)
+		}
+		if got != tc.want {
+			t.Errorf("menuLetter(%d) = %q, want %q", tc.n, got, tc.want)
+		}
+	}
+}
+
+func changeableMeal(deadline time.Time) *Meal {
+	return &Meal{
+		BoarderID:         "999",
+		MealIndex:         "2",
+		Date:              time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC),
+		CanBeChangedUntil: &deadline,
+	}
+}
+
+func TestBuildMealChoiceRequest_JidsLetterMapping(t *testing.T) {
+	m := changeableMeal(time.Now().Add(time.Hour))
+
+	values, err := buildMealChoiceRequest(m, "C")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := values.Get("akcia"); got != "ulozJedlaStravnika" {
+		t.Errorf("akcia = %q, want %q", got, "ulozJedlaStravnika")
+	}
+
+	var payload struct {
+		StravnikID string            `json:"stravnikid"`
+		MysqlDate  string            `json:"mysqlDate"`
+		Jids       map[string]string `json:"jids"`
+		View       string            `json:"view"`
+		Pravo      string            `json:"pravo"`
+	}
+	if err := json.Unmarshal([]byte(values.Get("jedlaStravnika")), &payload); err != nil {
+		t.Fatalf("jedlaStravnika is not valid JSON: %v", err)
+	}
+	if payload.StravnikID != "999" {
+		t.Errorf("stravnikid = %q, want %q", payload.StravnikID, "999")
+	}
+	if payload.MysqlDate != "2024-03-15" {
+		t.Errorf("mysqlDate = %q, want %q", payload.MysqlDate, "2024-03-15")
+	}
+	if payload.Jids["2"] != "C" {
+		t.Errorf("jids[\"2\"] = %q, want %q", payload.Jids["2"], "C")
+	}
+	if payload.View != "pc_listok" || payload.Pravo != "Student" {
+		t.Errorf("view/pravo = %q/%q, want pc_listok/Student", payload.View, payload.Pravo)
+	}
+}
+
+func TestBuildMealChoiceRequest_SignOffUsesAX(t *testing.T) {
+	m := changeableMeal(time.Now().Add(time.Hour))
+
+	values, err := buildMealChoiceRequest(m, mealSignOffCode)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var payload struct {
+		Jids map[string]string `json:"jids"`
+	}
+	if err := json.Unmarshal([]byte(values.Get("jedlaStravnika")), &payload); err != nil {
+		t.Fatalf("jedlaStravnika is not valid JSON: %v", err)
+	}
+	if payload.Jids["2"] != "AX" {
+		t.Errorf("jids[\"2\"] = %q, want %q", payload.Jids["2"], "AX")
+	}
+}
+
+func TestBuildMealChoiceRequest_DeadlinePassed(t *testing.T) {
+	m := changeableMeal(time.Now().Add(-time.Hour))
+
+	if _, err := buildMealChoiceRequest(m, "A"); err == nil {
+		t.Error("expected an error for a meal whose change deadline has passed")
+	}
+}
+
+func TestBuildMealChoiceRequest_NoDeadlineAtAll(t *testing.T) {
+	m := &Meal{BoarderID: "999", MealIndex: "2", Date: time.Now()}
+
+	if _, err := buildMealChoiceRequest(m, "A"); err == nil {
+		t.Error("expected an error for a meal with no CanBeChangedUntil at all")
+	}
+}
+
+func TestBuildMealChoiceRequest_MissingBoarderID(t *testing.T) {
+	deadline := time.Now().Add(time.Hour)
+	m := &Meal{MealIndex: "2", Date: time.Now(), CanBeChangedUntil: &deadline}
+
+	_, err := buildMealChoiceRequest(m, "A")
+	if err == nil {
+		t.Fatal("expected an error for a meal with no boarder id")
+	}
+	if !errors.Is(err, ErrMissingData) {
+		t.Errorf("expected ErrMissingData, got %v", err)
+	}
+}
+
+func TestCheckMealWriteError(t *testing.T) {
+	t.Run("empty body is success", func(t *testing.T) {
+		if err := checkMealWriteError([]byte("")); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("non-JSON body is success", func(t *testing.T) {
+		if err := checkMealWriteError([]byte("OK")); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("JSON without error field is success", func(t *testing.T) {
+		if err := checkMealWriteError([]byte(`{"status":"ok"}`)); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("HTTP 200 with a non-empty error field fails", func(t *testing.T) {
+		err := checkMealWriteError([]byte(`{"error":"Termin na zmenu objednavky vypršal"}`))
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+	})
+
+	t.Run("empty error field is success", func(t *testing.T) {
+		if err := checkMealWriteError([]byte(`{"error":""}`)); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
 func TestCanStillChangeMeal(t *testing.T) {
 	day := time.Now()
 
@@ -148,5 +332,69 @@ func TestCanStillChangeMeal(t *testing.T) {
 	}
 	if canStillChangeMeal("garbage", day) {
 		t.Error("expected false for an unparseable deadline")
+	}
+}
+
+// TestParseChangeDeadlineMinutePrecision guards the format that the real
+// prihlas_do/odhlas_do fields use. Without it the deadline silently fails to
+// parse, CanBeChanged stays false and ordering is locked at every school
+// whose payload uses this shape.
+func TestParseChangeDeadlineMinutePrecision(t *testing.T) {
+	day := time.Date(2026, 9, 23, 0, 0, 0, 0, time.Local)
+
+	got := parseChangeDeadline("2026-09-23 07:30", day)
+	if got == nil {
+		t.Fatal("expected a parsed deadline for a minute-precision timestamp")
+	}
+	if got.Hour() != 7 || got.Minute() != 30 || got.Day() != 23 {
+		t.Errorf("parsed %v, want 2026-09-23 07:30", got)
+	}
+}
+
+// TestFirstChangeDeadlineFallsBack covers the observed case where zmen_do is
+// null but prihlas_do carries the real cut-off.
+func TestFirstChangeDeadlineFallsBack(t *testing.T) {
+	day := time.Date(2026, 9, 23, 0, 0, 0, 0, time.Local)
+
+	meal := map[string]any{
+		"zmen_do":    nil,
+		"prihlas_do": "2026-09-23 07:30",
+		"odhlas_do":  "2026-09-23 07:30",
+	}
+	got := firstChangeDeadline(meal, day, "zmen_do", "prihlas_do", "odhlas_do")
+	if got == nil {
+		t.Fatal("expected the prihlas_do fallback to supply a deadline")
+	}
+
+	if none := firstChangeDeadline(map[string]any{}, day, "zmen_do", "prihlas_do"); none != nil {
+		t.Errorf("expected nil when no key carries a deadline, got %v", none)
+	}
+}
+
+// TestParseChoosableMenusUsesMenusObject checks that orderable menus come
+// from the "menus" object (which carries the letter) rather than the flat
+// "rows" course list, and that choosableMenus is honoured.
+func TestParseChoosableMenusUsesMenusObject(t *testing.T) {
+	meal := map[string]any{
+		"menus": map[string]any{
+			"1": map[string]any{"skratkaMenu": "A", "nazovMenu": "Menu A", "nazov": "Soup\nChicken"},
+			"2": map[string]any{"skratkaMenu": "B", "nazovMenu": "Menu B", "nazov": "Salad"},
+		},
+		"choosableMenus": map[string]any{"1": true, "2": false},
+	}
+
+	menus := parseChoosableMenus(meal)
+	if len(menus) != 2 {
+		t.Fatalf("expected 2 menus, got %d", len(menus))
+	}
+	if menus[0].Number != "A" || menus[0].OrderIndex != "1" || !menus[0].Choosable {
+		t.Errorf("menu 0 = %+v, want orderable Menu A", menus[0])
+	}
+	if menus[1].Number != "B" || menus[1].Choosable {
+		t.Errorf("menu 1 = %+v, want Menu B marked not choosable", menus[1])
+	}
+
+	if got := parseChoosableMenus(map[string]any{}); got != nil {
+		t.Errorf("expected nil when there is no menus object, got %v", got)
 	}
 }

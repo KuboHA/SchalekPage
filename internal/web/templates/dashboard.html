@@ -1,675 +1,140 @@
+{{/*
+  notificationCards renders a slice of *notificationView as the notification
+  panel's cards. It is shared between the dashboard's initial render and the
+  GET /notifications/history fragment (see handleNotificationHistory in
+  handlers_timeline.go), so "load older" and the first paint can never drift
+  apart in markup.
+*/}}
+{{define "notificationCards"}}
+{{if .}}
+{{range .}}
+<article class="sw-note">
+    <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+            {{if .EventType}}
+                <span class="sw-badge"><i class="fa-solid {{.IconClass}}" aria-hidden="true"></i> {{eventTypeName .EventType}}</span>
+            {{end}}
+            <span>{{.FormattedTimestamp}}</span>
+            {{if gt .ConfirmationCount 0}}
+                <span class="sw-badge"><i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>{{.ConfirmationCount}}</span>
+            {{end}}
+        </div>
+        <div class="text-sm text-gray-300">
+            <strong>{{.Author}}</strong>
+            {{if and .Recipient (ne .Recipient "*")}}
+            <span class="ml-1 text-gray-400">&rarr; {{.Recipient}}</span>
+            {{end}}
+        </div>
+        <div class="text-sm text-gray-200 whitespace-pre-wrap break-words">
+            {{.Text}}
+        </div>
+        {{if .Attachments}}
+        <div class="mt-3 flex flex-wrap gap-2">
+            {{range .Attachments}}
+                {{if .IsImage}}
+                    <button type="button" data-image="{{.URL}}" data-name="{{.Name}}" class="preview-image-btn sw-chip">
+                        <i class="fa-solid fa-image" aria-hidden="true"></i>
+                        <span class="sw-chip-name">{{.Name}}</span>
+                    </button>
+                {{else}}
+                    <a href="{{.URL}}" class="sw-chip" download>
+                        <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                        <span class="sw-chip-name">{{.Name}}</span>
+                    </a>
+                {{end}}
+            {{end}}
+        </div>
+        {{end}}
+        {{if .Replies}}
+        <div class="sw-replies">
+            {{range .Replies}}
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                    {{if .EventType}}
+                        <i class="fa-solid {{.IconClass}} text-indigo-300"></i>
+                    {{end}}
+                    <span>{{.FormattedTimestamp}}</span>
+                    {{if gt .ConfirmationCount 0}}
+                        <span class="sw-badge"><i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>{{.ConfirmationCount}}</span>
+                    {{end}}
+                </div>
+                <div class="text-xs text-gray-400"><strong>{{.Author}}</strong></div>
+                <div class="text-sm text-gray-300 whitespace-pre-wrap break-words">{{.Text}}</div>
+                {{if .Attachments}}
+                <div class="flex flex-wrap gap-2 mt-2">
+                    {{range .Attachments}}
+                        {{if .IsImage}}
+                            <button type="button" data-image="{{.URL}}" data-name="{{.Name}}" class="preview-image-btn sw-chip">
+                                <i class="fa-solid fa-image" aria-hidden="true"></i>
+                                <span class="sw-chip-name">{{.Name}}</span>
+                            </button>
+                        {{else}}
+                            <a href="{{.URL}}" class="sw-chip" download>
+                                <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                                <span class="sw-chip-name">{{.Name}}</span>
+                            </a>
+                        {{end}}
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+</article>
+{{end}}
+{{else}}
+<p class="text-gray-400 text-sm">No notifications found.</p>
+{{end}}
+{{end}}
+
 {{define "dashboard.html"}}<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SchalekPage - Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/main.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        :root {
-            --primary-bg: linear-gradient(135deg, #0f172a, #1e293b);
-            --card-bg: rgba(30, 41, 59, 0.75);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --accent-blue: #60a5fa;
-            --accent-indigo: #818cf8;
-            --accent-green: #34d399;
-            --accent-yellow: #fbbf24;
-            --accent-purple: #a78bfa;
-            --text-primary: #f3f4f6;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--primary-bg);
-            background-attachment: fixed;
-            background-size: cover;
-            min-height: 100vh;
-            margin: 0;
-            color: var(--text-primary);
-        }
-
-        .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--card-border);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .hover-scale {
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .hover-scale:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-        }
-
-        button, a, .clickable {
-            cursor: pointer;
-        }
-
-        button[id^="btn-"] {
-            cursor: pointer;
-        }
-
-        /* Fix notification text display */
-        .notification-text {
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            word-break: break-word;
-            hyphens: auto;
-        }
-
-        .notification-text img {
-            max-width: 100%;
-            height: auto;
-        }
-
-        .notification-text a {
-            display: inline-block;
-            max-width: 100%;
-            overflow-wrap: break-word;
-        }
-
-        /* Text truncation with whole word preservation */
-        .smart-truncate {
-            position: relative;
-            display: inline;
-        }
-
-        /* Enhanced Mobile optimization */
-        @media (max-width: 768px) {
-            .sticky-mobile {
-                position: relative !important;
-                top: 0 !important;
-            }
-
-            /* Better touch targets for mobile */
-            .mobile-touch-target {
-                min-height: 44px;
-                min-width: 44px;
-            }
-
-            /* Better readability on mobile */
-            .mobile-text {
-                font-size: 16px !important;
-            }
-
-            /* Fix for slow animation on mobile */
-            .mobile-fast-transition {
-                transition-duration: 0.15s !important;
-            }
-
-            /* Fix for scrolling issues on mobile */
-            .mobile-scroll {
-                -webkit-overflow-scrolling: touch;
-            }
-
-            /* Better spacing for mobile content */
-            .mobile-p {
-                padding: 12px !important;
-            }
-
-            /* Safe area for notched phones */
-            .mobile-safe-bottom {
-                padding-bottom: env(safe-area-inset-bottom, 0px);
-            }
-
-            /* Add more visible active states for touch */
-            .mobile-active-state:active {
-                background: rgba(49, 58, 85, 0.8) !important;
-            }
-
-            /* Mobile column order classes */
-            .mobile-order-first {
-                order: -1 !important;
-            }
-            .mobile-order-0 {
-                order: 0 !important;
-            }
-            .mobile-order-1 {
-                order: 1 !important;
-            }
-            .mobile-order-2 {
-                order: 2 !important;
-            }
-            .mobile-order-3 {
-                order: 3 !important;
-            }
-
-            /* Mobile-specific touch targets */
-            .mobile-card {
-                padding: 12px !important;
-            }
-
-            /* Improved tap targets */
-            .mobile-tap-area {
-                min-height: 44px;
-            }
-
-            /* Hide text on buttons for mobile */
-            .btn-text-mobile {
-                display: none !important;
-            }
-
-            /* Center icons on mobile */
-            .btn-icon-mobile {
-                margin: 0 auto !important;
-            }
-
-            /* Adjust button size on mobile */
-            .btn-mobile {
-                padding: 1rem !important;
-                display: flex !important;
-                justify-content: center !important;
-            }
-
-            .mobile-timetable-container {
-                display: block !important;
-                border-radius: 1rem;
-                overflow: hidden;
-                margin-bottom: 1rem;
-            }
-
-            .mobile-timetable-header {
-                background: rgba(79, 70, 229, 0.2);
-                padding: 1rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-bottom: 1px solid rgba(79, 70, 229, 0.2);
-            }
-
-            .mobile-lunch-container {
-                display: block !important;
-                margin-bottom: 1rem;
-            }
-
-            .desktop-sections {
-                display: none !important;
-            }
-
-            .btn-text-mobile {
-                display: none !important;
-            }
-
-            .btn-icon-mobile {
-                margin: 0 auto !important;
-            }
-
-            .mobile-actions {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 0.5rem;
-            }
-
-            .mobile-action-btn {
-                padding: 0.75rem !important;
-                border-radius: 0.75rem !important;
-            }
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(30, 41, 59, 0.5);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(96, 165, 250, 0.5);
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(96, 165, 250, 0.7);
-        }
-    </style>
-    <style>
-    /* Modern mobile action buttons with improved design */
-    @media (max-width: 768px) {
-        /* Quick action buttons transformation */
-        .grid.grid-cols-2.md\:grid-cols-2.lg\:grid-cols-4 {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-            padding: 0 0.25rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .btn-mobile {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 0.75rem 0.5rem !important;
-            border-radius: 1rem !important;
-            transition: all 0.25s ease;
-            height: 5.5rem;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        .btn-mobile:after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
-        }
-
-        .btn-mobile:before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.2), transparent);
-        }
-
-        .btn-icon-mobile {
-            width: 2.75rem !important;
-            height: 2.75rem !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border-radius: 0.75rem !important;
-            margin-bottom: 0.5rem !important;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .btn-icon-mobile:after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 0.75rem;
-            padding: 2px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 60%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
-
-        .btn-text-mobile {
-            display: block !important;
-            text-align: center;
-            font-size: 0.7rem !important;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 0.25rem;
-        }
-
-        /* Button Colors */
-        .btn-blue {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.03));
-        }
-        .btn-blue .btn-icon-mobile i {
-            color: rgb(96, 165, 250);
-        }
-
-        .btn-green {
-            background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(16, 185, 129, 0.03));
-        }
-        .btn-green .btn-icon-mobile i {
-            color: rgb(52, 211, 153);
-        }
-
-        .btn-yellow {
-            background: linear-gradient(135deg, rgba(180, 83, 9, 0.1), rgba(217, 119, 6, 0.03));
-        }
-        .btn-yellow .btn-icon-mobile i {
-            color: rgb(251, 191, 36);
-        }
-
-        .btn-purple {
-            background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(139, 92, 246, 0.03));
-        }
-        .btn-purple .btn-icon-mobile i {
-            color: rgb(167, 139, 250);
-        }
-
-        /* Active state */
-        .btn-mobile:active {
-            transform: scale(0.96);
-        }
-
-        .btn-mobile:active .btn-icon-mobile {
-            transform: scale(0.92);
-        }
-
-        /* Animation for icons */
-        @keyframes pulse-subtle {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .btn-icon-mobile i {
-            will-change: transform;
-            animation: pulse-subtle 3s infinite ease-in-out;
-            animation-delay: calc(var(--btn-index) * 0.5s);
-            font-size: 1.35rem !important;
-        }
-    }
-</style>
-<style>
-    /* Mobile-optimized layout for lunch and timetable */
-    @media (max-width: 768px) {
-        /* Reorder content for mobile */
-        .mobile-content-order {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .mobile-content-order > .lg\:col-span-6 {
-            order: 3;
-        }
-
-        /* Compact dashboard cards */
-        .mobile-info-cards {
-            display: flex;
-            margin: 0.5rem 0 1.5rem;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            gap: 0;
-            padding-bottom: 0.75rem;
-        }
-
-        .mobile-info-cards::-webkit-scrollbar {
-            display: none;
-        }
-
-        .mobile-info-card {
-            scroll-snap-align: start;
-            flex: 0 0 85%;
-            max-width: 85%;
-            border-radius: 1rem;
-            margin-right: 0.75rem;
-            background: rgba(30, 41, 59, 0.75);
-            border: 1px solid rgba(99, 102, 241, 0.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 0 !important;
-            overflow: hidden;
-        }
-
-        /* Card header styling */
-        .mobile-card-header {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            background: rgba(15, 23, 42, 0.6);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .mobile-card-header h3 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: rgba(226, 232, 240, 1);
-            display: flex;
-            align-items: center;
-            margin: 0;
-        }
-
-        .mobile-card-header .mobile-card-icon {
-            width: 1.5rem;
-            height: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.5rem;
-            margin-right: 0.5rem;
-            font-size: 0.8rem;
-        }
-
-        .mobile-lunch-icon {
-            background: rgba(245, 158, 11, 0.2);
-            color: rgba(251, 191, 36, 1);
-        }
-
-        .mobile-timetable-icon {
-            background: rgba(124, 58, 237, 0.2);
-            color: rgba(167, 139, 250, 1);
-        }
-
-        .mobile-card-link {
-            font-size: 0.7rem;
-            font-weight: 500;
-            color: rgba(96, 165, 250, 1);
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
-            background: rgba(96, 165, 250, 0.1);
-            transition: all 0.2s ease;
-        }
-
-        .mobile-card-link:active {
-            background: rgba(96, 165, 250, 0.2);
-            transform: scale(0.96);
-        }
-
-        /* Card content styling */
-        .mobile-card-content {
-            padding: 0.75rem;
-            max-height: 24vh;
-            overflow-y: auto;
-            scrollbar-width: thin;
-        }
-
-        /* Lunch specific styles */
-        .mobile-lunch-item {
-            padding: 0.6rem;
-            border-radius: 0.6rem;
-            background: rgba(17, 24, 39, 0.4);
-            margin-bottom: 0.6rem;
-            position: relative;
-        }
-
-        .mobile-lunch-menu-tag {
-            font-size: 0.65rem;
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            background: rgba(30, 41, 59, 0.8);
-            color: rgba(251, 191, 36, 1);
-            margin-bottom: 0.3rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .mobile-lunch-ordered {
-            background: rgba(5, 150, 105, 0.1);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        .mobile-lunch-ordered:before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: rgba(16, 185, 129, 0.7);
-            border-top-left-radius: 0.6rem;
-            border-bottom-left-radius: 0.6rem;
-        }
-
-        .mobile-lunch-text {
-            font-size: 0.8rem;
-            color: rgba(226, 232, 240, 0.9);
-            line-height: 1.3;
-        }
-
-        /* Timetable specific styles */
-        .mobile-timetable-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 0.6rem;
-            border-radius: 0.6rem;
-            background: rgba(17, 24, 39, 0.4);
-            margin-bottom: 0.6rem;
-            position: relative;
-        }
-
-        .mobile-period-number {
-            width: 1.5rem;
-            height: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(124, 58, 237, 0.15);
-            color: rgba(167, 139, 250, 1);
-            border-radius: 0.4rem;
-            font-weight: 600;
-            font-size: 0.75rem;
-            margin-right: 0.6rem;
-            flex-shrink: 0;
-        }
-
-        .mobile-class-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .mobile-class-subject {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: rgba(226, 232, 240, 1);
-            margin-bottom: 0.2rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .mobile-class-details {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.7rem;
-        }
-
-        .mobile-class-teacher {
-            color: rgba(148, 163, 184, 1);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 70%;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .mobile-class-room {
-            color: rgba(167, 139, 250, 0.9);
-            background: rgba(124, 58, 237, 0.1);
-            padding: 0.15rem 0.3rem;
-            border-radius: 0.3rem;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .mobile-empty-message {
-            text-align: center;
-            color: rgba(148, 163, 184, 1);
-            font-size: 0.85rem;
-            padding: 1.5rem 0;
-        }
-
-        .mobile-empty-message i {
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
-            opacity: 0.5;
-        }
-
-        /* Pagination dots for card scrolling */
-        .mobile-pagination {
-            display: flex;
-            justify-content: center;
-            gap: 0.3rem;
-            margin-top: -0.25rem;
-            margin-bottom: -0.5rem;
-        }
-
-        .mobile-pagination-dot {
-            width: 0.5rem;
-            height: 0.5rem;
-            border-radius: 50%;
-            background: rgba(100, 116, 139, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        .mobile-pagination-dot.active {
-            background: rgba(96, 165, 250, 0.7);
-            transform: scale(1.2);
-        }
-    }
-</style>
+{{template "swisshead" "Dashboard"}}
 </head>
-<body class="min-h-screen text-gray-100 mobile-safe-bottom">
+<body class="mobile-safe-bottom has-tabbar" data-nav="dashboard">
     <!-- Modernized Navbar -->
-    <nav class="bg-gradient-to-r from-gray-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-gray-100 bg-clip-text">
-                        SchalekPage
-                    </h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-300">{{if .Student}}{{.Student.Name}}{{end}}</span>
-                </div>
-            </div>
-        </div>
-    </nav>
+{{template "swissnav" .}}
 
     <!-- Main Content Container -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="sw-shell">
+        <header class="sw-head">
+            <div>
+                <p class="sw-eyebrow">{{if .ShowTomorrow}}Tomorrow{{else}}Today{{end}}</p>
+                <h1 class="sw-title">Dashboard</h1>
+            </div>
+        </header>
+
         <!-- Mobile-only actions and cards -->
         <div class="block md:hidden">
             <!-- Quick Actions - Mobile version -->
-            <div class="grid grid-cols-4 gap-2 mb-4">
+            <div class="sw-actions">
                 <button onclick="location.href='/substitutions/'"
-                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-blue" style="--btn-index: 0">
-                    <div class="bg-blue-500/20 p-3 rounded-lg btn-icon-mobile">
+                        class="btn-mobile" style="--btn-index: 0">
+                    <div class="btn-icon-mobile">
                         <i class="fas fa-exchange-alt"></i>
                     </div>
                     <span class="font-medium btn-text-mobile">Substitutions</span>
                 </button>
                 <button onclick="location.href='/grades'"
-                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-green" style="--btn-index: 1">
-                    <div class="bg-green-500/20 p-3 rounded-lg btn-icon-mobile">
+                        class="btn-mobile" style="--btn-index: 1">
+                    <div class="btn-icon-mobile">
                         <i class="fas fa-graduation-cap"></i>
                     </div>
                     <span class="font-medium btn-text-mobile">Grades</span>
                 </button>
                 <button onclick="location.href='/lunches/'"
-                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-yellow" style="--btn-index: 2">
-                    <div class="bg-yellow-500/20 p-3 rounded-lg btn-icon-mobile">
+                        class="btn-mobile" style="--btn-index: 2">
+                    <div class="btn-icon-mobile">
                         <i class="fas fa-utensils"></i>
                     </div>
                     <span class="font-medium btn-text-mobile">Lunches</span>
                 </button>
                 <button onclick="location.href='/timetable/'"
-                        class="card p-4 rounded-xl hover-scale flex items-center space-x-3 btn-mobile btn-purple" style="--btn-index: 3">
-                    <div class="bg-purple-500/20 p-3 rounded-lg btn-icon-mobile">
+                        class="btn-mobile" style="--btn-index: 3">
+                    <div class="btn-icon-mobile">
                         <i class="fas fa-clock"></i>
                     </div>
                     <span class="font-medium btn-text-mobile">Timetable</span>
@@ -800,34 +265,34 @@
         </div>
 
         <!-- Desktop-only: Original quick actions layout -->
-        <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="sw-actions sw-actions--desktop hidden md:grid">
             <button onclick="location.href='/substitutions/'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-blue-500/20 p-3 rounded-lg">
-                    <i class="fas fa-exchange-alt text-blue-400"></i>
+                    class="sw-action">
+                <div class="sw-action-icon">
+                    <i class="fas fa-exchange-alt "></i>
                 </div>
-                <span class="font-medium">Substitutions</span>
+                <span class="sw-action-label">Substitutions</span>
             </button>
             <button onclick="location.href='/grades'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-green-500/20 p-3 rounded-lg">
-                    <i class="fas fa-graduation-cap text-green-400"></i>
+                    class="sw-action">
+                <div class="sw-action-icon">
+                    <i class="fas fa-graduation-cap "></i>
                 </div>
-                <span class="font-medium">Grades</span>
+                <span class="sw-action-label">Grades</span>
             </button>
             <button onclick="location.href='/lunches/'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-yellow-500/20 p-3 rounded-lg">
-                    <i class="fas fa-utensils text-yellow-400"></i>
+                    class="sw-action">
+                <div class="sw-action-icon">
+                    <i class="fas fa-utensils "></i>
                 </div>
-                <span class="font-medium">Lunches</span>
+                <span class="sw-action-label">Lunches</span>
             </button>
             <button onclick="location.href='/timetable/'"
-                    class="card p-4 rounded-xl hover-scale flex items-center space-x-3">
-                <div class="bg-purple-500/20 p-3 rounded-lg">
-                    <i class="fas fa-clock text-purple-400"></i>
+                    class="sw-action">
+                <div class="sw-action-icon">
+                    <i class="fas fa-clock "></i>
                 </div>
-                <span class="font-medium">Timetable</span>
+                <span class="sw-action-label">Timetable</span>
             </button>
         </div>
 
@@ -835,39 +300,22 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <!-- Left Column - Lunch Menu -->
             <div class="lg:col-span-3 hidden md:block">
-                <div class="card rounded-xl p-4 sticky top-20">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold">
-                            {{if .ShowTomorrow}}
-                                Tomorrow's Lunch
-                            {{else}}
-                                Today's Lunch
-                            {{end}}
-                        </h2>
-                        <a href="/lunches/"
-                           class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-                            View All
-                        </a>
+                <div class="sw-panel sticky top-20">
+                    <div class="sw-section-title">
+                        <span>{{if .ShowTomorrow}}Tomorrow's lunch{{else}}Today's lunch{{end}}</span>
+                        <a href="/lunches/" class="sw-link">All</a>
                     </div>
                     {{if .Meals}}
                         <ul class="space-y-3">
                             {{range $meal := .Meals}}
                                 {{range $menu := $meal.Menus}}
                                     <li class="relative group">
-                                        <div class="card rounded-lg p-3 transition-all duration-200
-                                            {{if menuOrdered $meal $menu}}
-                                                ring-2 ring-green-500 bg-green-500/10
-                                            {{end}}">
+                                        <div class="sw-mini{{if menuOrdered $meal $menu}} is-selected{{end}}">
                                             {{if $menu.Number}}
                                                 <div class="flex items-center space-x-2 mb-1">
-                                                    <span class="py-0.5 bg-gray-800/50 rounded-full text-xs font-medium text-green-400">
-                                                        <i class="fas fa-utensils mr-1"></i>
-                                                        Menu {{$menu.Number}}
-                                                    </span>
+                                                    <span class="sw-badge">Menu {{$menu.Number}}</span>
                                                     {{if menuOrdered $meal $menu}}
-                                                        <span class="text-xs text-green-400">
-                                                            <i class="fas fa-check-circle"></i> Ordered
-                                                        </span>
+                                                        <span class="sw-badge sw-badge--solid">Ordered</span>
                                                     {{end}}
                                                 </div>
                                             {{end}}
@@ -897,135 +345,36 @@
 
             <!-- Middle Column - Notifications -->
             <div class="lg:col-span-6">
-                <div class="card rounded-xl p-6">
-                    <h2 class="text-xl font-semibold mb-6">Notifications</h2>
-                    <div class="space-y-4">
-                        {{if .Notifications}}
-                        {{range .Notifications}}
-                        <div class="card rounded-lg p-4 hover:bg-gray-800/50 transition-colors duration-200">
-                            <div class="flex flex-col gap-2">
-                                <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                                    {{if .EventType}}
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 font-medium">
-                                            <i class="fa-solid {{.IconClass}} text-indigo-300"></i>
-                                        </span>
-                                    {{end}}
-                                    <span>{{.FormattedTimestamp}}</span>
-                                    {{if gt .ConfirmationCount 0}}
-                                        <span class="px-2 py-0.5 rounded bg-green-500/10 text-green-300 font-medium flex items-center gap-2"><i class="fa-solid fa-thumbs-up"></i>{{.ConfirmationCount}}</span>
-                                    {{end}}
-                                </div>
-                                <div class="text-sm text-gray-300">
-                                    <strong>{{.Author}}</strong>
-                                    {{if and .Recipient (ne .Recipient "*")}}
-                                    <span class="ml-1 text-gray-400">&rarr; {{.Recipient}}</span>
-                                    {{end}}
-                                </div>
-                                <div class="text-sm text-gray-200 whitespace-pre-wrap break-words">
-                                    {{.Text}}
-                                </div>
-                                {{if .Attachments}}
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    {{range .Attachments}}
-                                        {{if .IsImage}}
-                                            <button type="button" data-image="{{.URL}}" data-name="{{.Name}}" class="preview-image-btn group relative inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600/20 to-purple-600/20 hover:from-indigo-500/30 hover:to-purple-500/30 border border-indigo-500/30 hover:border-indigo-400/50 transition-all duration-200 shadow-sm hover:shadow-md">
-                                                <div class="flex items-center gap-2">
-                                                    <i class="fa-solid fa-image text-indigo-400 group-hover:text-indigo-300 text-sm"></i>
-                                                    <span class="text-indigo-200 group-hover:text-indigo-100 font-medium truncate max-w-[140px]">{{.Name}}</span>
-                                                </div>
-                                                <div class="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-600/0 to-purple-600/0 group-hover:from-indigo-600/10 group-hover:to-purple-600/10 transition-all duration-200"></div>
-                                                <i class="fa-solid fa-eye text-xs text-indigo-400/70 group-hover:text-indigo-300 ml-1"></i>
-                                            </button>
-                                        {{else}}
-                                            <a href="{{.URL}}" class="group relative inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-gradient-to-r from-gray-700/40 to-gray-600/40 hover:from-gray-600/50 hover:to-gray-500/50 border border-gray-600/40 hover:border-gray-500/60 transition-all duration-200 shadow-sm hover:shadow-md" download>
-                                                <div class="flex items-center gap-2">
-                                                    <i class="fa-solid fa-paperclip text-gray-400 group-hover:text-gray-300 text-sm"></i>
-                                                    <span class="text-gray-200 group-hover:text-gray-100 font-medium truncate max-w-[140px]">{{.Name}}</span>
-                                                </div>
-                                                <div class="absolute inset-0 rounded-lg bg-gradient-to-r from-gray-700/0 to-gray-600/0 group-hover:from-gray-600/10 group-hover:to-gray-500/10 transition-all duration-200"></div>
-                                                <i class="fa-solid fa-download text-xs text-gray-400/70 group-hover:text-gray-300 ml-1"></i>
-                                            </a>
-                                        {{end}}
-                                    {{end}}
-                                </div>
-                                {{end}}
-                                {{if .Replies}}
-                                <div class="mt-3 pl-4 border-l border-gray-700/50 space-y-3">
-                                    {{range .Replies}}
-                                    <div class="flex flex-col gap-1">
-                                        <div class="flex items-center gap-2 text-xs text-gray-500">
-                                            {{if .EventType}}
-                                                <i class="fa-solid {{.IconClass}} text-indigo-300"></i>
-                                            {{end}}
-                                            <span>{{.FormattedTimestamp}}</span>
-                                            {{if gt .ConfirmationCount 0}}
-                                                <span class="px-2 py-0.5 rounded bg-green-500/10 text-green-300 font-medium flex items-center gap-1"><i class="fa-solid fa-thumbs-up"></i>{{.ConfirmationCount}}</span>
-                                            {{end}}
-                                        </div>
-                                        <div class="text-xs text-gray-400"><strong>{{.Author}}</strong></div>
-                                        <div class="text-sm text-gray-300 whitespace-pre-wrap break-words">{{.Text}}</div>
-                                        {{if .Attachments}}
-                                        <div class="flex flex-wrap gap-2 mt-2">
-                                            {{range .Attachments}}
-                                                {{if .IsImage}}
-                                                    <button type="button" data-image="{{.URL}}" data-name="{{.Name}}" class="preview-image-btn group relative inline-flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md bg-gradient-to-r from-indigo-600/15 to-purple-600/15 hover:from-indigo-500/25 hover:to-purple-500/25 border border-indigo-500/25 hover:border-indigo-400/40 transition-all duration-200">
-                                                        <i class="fa-solid fa-image text-indigo-400 group-hover:text-indigo-300 text-xs"></i>
-                                                        <span class="text-indigo-200 group-hover:text-indigo-100 font-medium truncate max-w-[120px]">{{.Name}}</span>
-                                                        <i class="fa-solid fa-eye text-xs text-indigo-400/60 group-hover:text-indigo-300"></i>
-                                                    </button>
-                                                {{else}}
-                                                    <a href="{{.URL}}" class="group relative inline-flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md bg-gradient-to-r from-gray-700/30 to-gray-600/30 hover:from-gray-600/40 hover:to-gray-500/40 border border-gray-600/30 hover:border-gray-500/50 transition-all duration-200" download>
-                                                        <i class="fa-solid fa-paperclip text-gray-400 group-hover:text-gray-300 text-xs"></i>
-                                                        <span class="text-gray-200 group-hover:text-gray-100 font-medium truncate max-w-[120px]">{{.Name}}</span>
-                                                        <i class="fa-solid fa-download text-xs text-gray-400/60 group-hover:text-gray-300"></i>
-                                                    </a>
-                                                {{end}}
-                                            {{end}}
-                                        </div>
-                                        {{end}}
-                                    </div>
-                                    {{end}}
-                                </div>
-                                {{end}}
-                            </div>
-                        </div>
-                        {{end}}
-                        {{else}}
-                        <p class="text-gray-400 text-sm">No notifications found.</p>
-                        {{end}}
+                <div class="sw-panel">
+                    <div class="sw-section-title"><span>Notifications</span></div>
+                    <div class="space-y-4" id="notifications-list">
+                        {{template "notificationCards" .Notifications}}
+                    </div>
+                    <div class="mt-4 flex justify-center">
+                        <button type="button" id="load-older-notifications" class="sw-btn">
+                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                            <span>Load older</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Right Column - Timetable -->
             <div class="lg:col-span-3 hidden md:block">
-                <div class="card rounded-xl p-4 sticky top-20">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold">
-                            {{if .ShowTomorrow}}
-                                Tomorrow's Classes
-                            {{else}}
-                                Today's Classes
-                            {{end}}
-                        </h2>
-                        <a href="/timetable/"
-                           class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-                            View All
-                        </a>
+                <div class="sw-panel sticky top-20">
+                    <div class="sw-section-title">
+                        <span>{{if .ShowTomorrow}}Tomorrow's classes{{else}}Today's classes{{end}}</span>
+                        <a href="/timetable/" class="sw-link">All</a>
                     </div>
                     {{if .Timetable}}
                         <ul class="space-y-2">
                             {{range .Timetable}}
-                                <li class="card rounded-lg p-2 hover:bg-gray-800/50 transition-colors duration-200">
+                                <li class="sw-mini">
                                     <div class="flex gap-2">
                                         {{if .HasPeriod}}
-                                            <div class="flex-shrink-0 w-6 h-6 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-medium text-sm">
-                                                {{.Period}}
-                                            </div>
+                                            <div class="mobile-period-number">{{.Period}}</div>
                                         {{else}}
-                                            <div class="flex-shrink-0 w-6 h-6 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-medium text-sm">
-                                                <i class="fas fa-xmark"></i>
-                                            </div>
+                                            <div class="mobile-period-number"><i class="fas fa-xmark"></i></div>
                                         {{end}}
                                         <div class="flex-1 min-w-0">
                                             <!-- First row: Subject and Classroom -->
@@ -1034,9 +383,7 @@
                                                     {{if .HasSubject}}{{.Subject}}{{else}}Cancelled{{end}}
                                                 </p>
                                                 {{if .Classrooms}}
-                                                    <span class="text-xs bg-indigo-500/20 text-indigo-300 py-0.5 px-1.5 rounded ml-auto whitespace-nowrap">
-                                                        <i class="fas fa-door-open mr-1"></i>{{.Classrooms}}
-                                                    </span>
+                                                    <span class="mobile-class-room ml-auto">{{.Classrooms}}</span>
                                                 {{end}}
                                             </div>
                                             <!-- Second row: Teacher -->
@@ -1063,7 +410,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Fix for pagination dots not updating on swipe
@@ -1237,24 +584,7 @@
         }
     }
 
-    // Add the CSS rules for highlighted class
-    const styleElement = document.createElement('style');
-    styleElement.textContent = `
-        .highlighted-class {
-            position: relative;
-            background: linear-gradient(90deg, rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.05)) !important;
-            border-left: 3px solid #6366f1 !important;
-            transform: translateX(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Mobile-specific styles */
-        .mobile-timetable-item.highlighted-class {
-            background: linear-gradient(90deg, rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.05)) !important;
-            border-left: 3px solid #6366f1 !important;
-        }
-    `;
-    document.head.appendChild(styleElement);
+    // .highlighted-class is styled in static/css/main.css.
 
     // Run highlight function when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -1265,29 +595,26 @@
     });
 </script>
 <!-- Image Preview Modal -->
-<div id="imagePreviewModal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-50 p-4">
-    <div class="relative max-w-4xl w-full mx-auto bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-700/40 overflow-hidden">
+<div id="imagePreviewModal" class="sw-modal hidden">
+    <div class="sw-modal-panel">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 border-b border-gray-700/50 bg-gray-800/50 sticky top-0 z-30">
+        <div class="sw-modal-head">
             <div class="flex items-center gap-3">
-                <div class="p-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30">
-                    <i class="fa-solid fa-image text-indigo-400 text-base"></i>
-                </div>
                 <div>
-                    <h2 id="imagePreviewTitle" class="text-base font-semibold text-white truncate max-w-[250px]"></h2>
-                    <p class="text-xs text-gray-400">Image Preview</p>
+                    <h2 id="imagePreviewTitle" class="sw-modal-title"></h2>
+                    <p class="sw-eyebrow" style="margin:0">Attachment</p>
                 </div>
             </div>
-            <button id="closeImageModal" class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-red-600/20 hover:border-red-500/30 border border-gray-600/30 transition-all duration-200 z-40">
+            <button id="closeImageModal" class="sw-btn sw-btn--icon" aria-label="Close">
                 <i class="fa-solid fa-times text-lg"></i>
             </button>
         </div>
 
         <!-- Image Container -->
-        <div class="relative bg-gray-950/50 min-h-[300px] max-h-[50vh] overflow-auto flex items-center justify-center group">
+        <div class="sw-modal-body group">
             <!-- Loading spinner -->
             <div id="imageLoader" class="absolute inset-0 flex items-center justify-center z-10">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                <div class="sw-spinner"></div>
             </div>
 
             <!-- Main image -->
@@ -1310,7 +637,7 @@
         </div>
 
         <!-- Footer Actions -->
-        <div class="flex items-center justify-between p-3 border-t border-gray-700/50 bg-gray-800/30 sticky bottom-0 z-30">
+        <div class="sw-modal-foot">
             <div class="flex items-center gap-2 text-xs text-gray-400">
                 <i class="fa-solid fa-info-circle"></i>
                 <span>ESC to close &bull; Click to zoom</span>
@@ -1477,5 +804,54 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+<script>
+// "Load older" notifications: the dashboard's initial notification list
+// comes straight from the cached login payload (see handleDashboard), which
+// EduPage caps at roughly a month. Each click here pages further into the
+// past via GET /notifications/history?since=YYYY-MM-DD (handleNotification
+// History in handlers_timeline.go), which performs a real network request
+// through edupage.Client.NotificationsSince and returns the same
+// "notificationCards" fragment used for the first paint, so the two never
+// look different. The fragment is a superset of what's shown (it covers
+// every event on/after `since`), so it fully replaces the list rather than
+// being appended.
+document.addEventListener('DOMContentLoaded', function () {
+    var button = document.getElementById('load-older-notifications');
+    var list = document.getElementById('notifications-list');
+    if (!button || !list) return;
+
+    // Steps another 30 days into the past on every click, starting from
+    // today — the login payload already covers roughly the last month, so
+    // the first click's request naturally re-covers that window plus one
+    // more month behind it.
+    var cursor = new Date();
+
+    button.addEventListener('click', function () {
+        cursor.setDate(cursor.getDate() - 30);
+        var since = cursor.toISOString().slice(0, 10);
+
+        button.disabled = true;
+        var originalLabel = button.innerHTML;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Loading…</span>';
+
+        fetch('/notifications/history?since=' + encodeURIComponent(since))
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('request failed');
+                return resp.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                button.disabled = false;
+                button.innerHTML = originalLabel;
+            })
+            .catch(function () {
+                button.disabled = false;
+                button.innerHTML = '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Couldn\'t load — retry</span>';
+            });
+    });
+});
+</script>
+{{template "swissthemejs"}}
+{{template "swisstabbar"}}
 </body>
 </html>{{end}}

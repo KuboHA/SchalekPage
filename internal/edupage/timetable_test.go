@@ -132,6 +132,144 @@ func TestParseTimetablePlan(t *testing.T) {
 	}
 }
 
+func TestParseTimetablePlan_CancelledEventGroupFlags(t *testing.T) {
+	day := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
+
+	plan := []any{
+		// Ordinary lesson: no "type"/"removed"/"main" keys at all. Must NOT
+		// be flagged cancelled or event, even though a naive "type == \"\""
+		// check on a missing key would wrongly mark it cancelled.
+		map[string]any{
+			"uniperiod":  "1",
+			"starttime":  "08:00",
+			"endtime":    "08:45",
+			"groupnames": []any{"1.A/sk1", "", "1.A/sk2"},
+		},
+		// Explicitly removed.
+		map[string]any{
+			"uniperiod": "2",
+			"starttime": "08:50",
+			"endtime":   "09:35",
+			"removed":   true,
+		},
+		// type == "absent".
+		map[string]any{
+			"uniperiod": "3",
+			"starttime": "09:50",
+			"endtime":   "10:35",
+			"type":      "absent",
+		},
+		// type == "" (present but empty, as opposed to missing).
+		map[string]any{
+			"uniperiod": "4",
+			"starttime": "10:45",
+			"endtime":   "11:30",
+			"type":      "",
+		},
+		// type == "event".
+		map[string]any{
+			"uniperiod": "5",
+			"starttime": "11:40",
+			"endtime":   "12:25",
+			"type":      "event",
+		},
+		// type == "out".
+		map[string]any{
+			"uniperiod": "6",
+			"starttime": "12:35",
+			"endtime":   "13:20",
+			"type":      "out",
+		},
+		// main is truthy.
+		map[string]any{
+			"uniperiod": "7",
+			"starttime": "13:30",
+			"endtime":   "14:15",
+			"main":      true,
+		},
+	}
+
+	lessons := parseTimetablePlan(plan, day, nil, nil, nil)
+	if len(lessons) != 7 {
+		t.Fatalf("got %d lessons, want 7: %#v", len(lessons), lessons)
+	}
+
+	ordinary := lessons[0]
+	if ordinary.IsCancelled || ordinary.IsEvent {
+		t.Errorf("ordinary lesson: IsCancelled=%v IsEvent=%v, want both false", ordinary.IsCancelled, ordinary.IsEvent)
+	}
+	if want := []string{"1.A/sk1", "1.A/sk2"}; len(ordinary.Groups) != len(want) || ordinary.Groups[0] != want[0] || ordinary.Groups[1] != want[1] {
+		t.Errorf("Groups = %#v, want %#v (empty entries filtered)", ordinary.Groups, want)
+	}
+
+	for i, name := range []string{"removed=true", `type="absent"`, `type=""`} {
+		l := lessons[i+1]
+		if !l.IsCancelled {
+			t.Errorf("lesson %d (%s): IsCancelled = false, want true", i+1, name)
+		}
+		if l.IsEvent {
+			t.Errorf("lesson %d (%s): IsEvent = true, want false", i+1, name)
+		}
+	}
+
+	for i, name := range []string{`type="event"`, `type="out"`, "main=true"} {
+		l := lessons[i+4]
+		if !l.IsEvent {
+			t.Errorf("lesson %d (%s): IsEvent = false, want true", i+4, name)
+		}
+		if l.IsCancelled {
+			t.Errorf("lesson %d (%s): IsCancelled = true, want false", i+4, name)
+		}
+	}
+}
+
+func TestIsLessonType(t *testing.T) {
+	cases := []struct {
+		name string
+		item map[string]any
+		want string
+		ok   bool
+	}{
+		{"missing key never matches, even want=\"\"", map[string]any{}, "", false},
+		{"missing key never matches a non-empty want", map[string]any{}, "absent", false},
+		{"exact match", map[string]any{"type": "absent"}, "absent", true},
+		{"present empty string matches want=\"\"", map[string]any{"type": ""}, "", true},
+		{"non-string type never matches", map[string]any{"type": float64(1)}, "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isLessonType(tc.item, tc.want); got != tc.ok {
+				t.Errorf("isLessonType(%#v, %q) = %v, want %v", tc.item, tc.want, got, tc.ok)
+			}
+		})
+	}
+}
+
+func TestTruthy(t *testing.T) {
+	cases := []struct {
+		in   any
+		want bool
+	}{
+		{nil, false},
+		{false, false},
+		{true, true},
+		{float64(0), false},
+		{float64(1), true},
+		{"", false},
+		{"0", false},
+		{"anything else", true},
+		{map[string]any{}, false},
+		{map[string]any{"k": "v"}, true},
+		{[]any{}, false},
+		{[]any{1}, true},
+	}
+	for _, tc := range cases {
+		if got := truthy(tc.in); got != tc.want {
+			t.Errorf("truthy(%#v) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestParseTimetablePlan_UnresolvedIDsKeepStubs(t *testing.T) {
 	day := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
 

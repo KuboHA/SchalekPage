@@ -22,4 +22,10 @@ var (
 	// ErrNotLoggedIn is returned when a method that requires an authenticated
 	// session is called before Login/Restore has populated session data.
 	ErrNotLoggedIn = errors.New("edupage: not logged in")
+
+	// ErrSessionExpired is returned when an endpoint that depends on
+	// Client.GsecHash() reports it stale (EduPage signals this with a
+	// "reload" key in place of real data) and a single transparent
+	// Restore() + retry did not resolve it either.
+	ErrSessionExpired = errors.New("edupage: session expired")
 )

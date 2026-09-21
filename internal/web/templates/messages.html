@@ -1,0 +1,332 @@
+{{define "messages.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "swisshead" "Messages"}}
+<style>
+    /* Scoped to this page: the shared stylesheet has no checkbox-list or
+       chip-remove-button styling yet, so these lean on the same custom
+       properties main.css defines (--ink, --rule, --tint-*, ...) rather
+       than introducing new colours. */
+    .sw-picker {
+        max-height: 14rem;
+        overflow-y: auto;
+        border: var(--rule-hair) solid var(--rule);
+        margin-top: 0.5rem;
+    }
+    .sw-picker-item {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.5rem 0.75rem;
+        border-bottom: var(--rule-hair) solid var(--rule);
+        font-size: 0.8125rem;
+        cursor: pointer;
+    }
+    .sw-picker-item:last-child { border-bottom: 0; }
+    .sw-picker-item:hover { background: var(--tint-1); }
+    .sw-picker-item input { accent-color: var(--ink); }
+    .sw-picker-empty {
+        padding: 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--ink-3);
+    }
+    .sw-msg-summary {
+        cursor: pointer;
+        font-size: 0.625rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        margin-bottom: 0;
+    }
+    .sw-msg-body-preview {
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        border: var(--rule-hair) solid var(--rule-2);
+        padding: 0.875rem;
+        font-size: 0.9375rem;
+        line-height: 1.5;
+    }
+    .sw-msg-names {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0;
+        border: var(--rule-hair) solid var(--rule);
+    }
+    .sw-msg-names li {
+        padding: 0.5rem 0.75rem;
+        border-bottom: var(--rule-hair) solid var(--rule);
+        font-size: 0.8125rem;
+    }
+    .sw-msg-names li:last-child { border-bottom: 0; }
+    .sw-chip-remove {
+        background: none;
+        border: 0;
+        padding: 0;
+        margin-left: 0.125rem;
+        font-size: 0.875rem;
+        line-height: 1;
+        color: inherit;
+        cursor: pointer;
+    }
+    .sw-attach-row {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        flex-wrap: wrap;
+    }
+    .sw-attach-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    .sw-attach-status {
+        font-size: 0.75rem;
+        color: var(--ink-3);
+    }
+</style>
+</head>
+<body class="mobile-safe-bottom has-tabbar" data-nav="messages">
+{{template "swissnav" .}}
+
+<main class="sw-shell sw-shell--narrow">
+    <a href="/dashboard" class="back-button" style="margin-top:1.5rem">
+        <span class="icon"><i class="fas fa-chevron-left" aria-hidden="true"></i></span>
+        <span>Dashboard</span>
+    </a>
+
+    <header class="sw-head">
+        <div>
+            <p class="sw-eyebrow">Compose</p>
+            <h1 class="sw-title">Messages</h1>
+            <p class="sw-sub">Send a message to students or teachers at your school.</p>
+        </div>
+    </header>
+
+    {{if .Sent}}
+        <div class="sw-notice" role="status">
+            <i class="fas fa-check-circle" aria-hidden="true"></i>
+            <p>Message sent (id #{{.SentID}}).</p>
+        </div>
+    {{end}}
+
+    {{if .Error}}
+        <div class="sw-notice" role="alert">
+            <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+            <p>{{.Error}}</p>
+        </div>
+    {{end}}
+
+    {{if .Confirming}}
+        <div class="sw-notice" role="alert">
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+            <p><strong>Nothing has been sent yet.</strong> Check the recipients and message below, then confirm. This cannot be undone once sent.</p>
+        </div>
+
+        <section class="sw-field">
+            <p class="sw-label">Recipients — {{len .RecipientNames}}</p>
+            <ul class="sw-msg-names">
+                {{range .RecipientNames}}<li>{{.}}</li>{{end}}
+            </ul>
+        </section>
+
+        <section class="sw-field">
+            <p class="sw-label">Message</p>
+            <div class="sw-msg-body-preview">{{.Body}}</div>
+        </section>
+
+        {{if .Attachments}}
+        <section class="sw-field">
+            <p class="sw-label">Attachments</p>
+            <div class="sw-attach-chips">
+                {{range .Attachments}}
+                <span class="sw-chip"><i class="fas fa-paperclip" aria-hidden="true"></i><span class="sw-chip-name">{{.Name}}</span></span>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+
+        <form method="POST" action="/messages/send">
+            {{range $id, $checked := .SelectedRecipients}}{{if $checked}}<input type="hidden" name="recipient" value="{{$id}}">{{end}}{{end}}
+            <input type="hidden" name="body" value="{{.Body}}">
+            <input type="hidden" name="attachments_json" value="{{.AttachmentsJSON}}">
+            <div class="sw-btn-group">
+                <button type="submit" name="action" value="edit" class="sw-btn">Back to edit</button>
+                <button type="submit" name="action" value="confirm" class="sw-btn sw-btn--solid">Confirm &amp; send</button>
+            </div>
+        </form>
+    {{else}}
+        <form method="POST" action="/messages/send">
+            <div class="sw-field">
+                <label class="sw-label" for="recipient-filter">Recipients</label>
+                <input class="sw-input" type="text" id="recipient-filter" placeholder="Filter by name…" autocomplete="off">
+            </div>
+
+            <details class="sw-field" open>
+                <summary class="sw-msg-summary">Students ({{len .StudentOptions}})</summary>
+                <div class="sw-picker">
+                    {{range .StudentOptions}}
+                    <label class="sw-picker-item" data-name="{{.Name}}">
+                        <input type="checkbox" name="recipient" value="{{.ID}}" {{if index $.SelectedRecipients .ID}}checked{{end}}>
+                        <span>{{.Name}}</span>
+                    </label>
+                    {{else}}
+                    <p class="sw-picker-empty">No students found.</p>
+                    {{end}}
+                </div>
+            </details>
+
+            <details class="sw-field">
+                <summary class="sw-msg-summary">Teachers ({{len .TeacherOptions}})</summary>
+                <div class="sw-picker">
+                    {{range .TeacherOptions}}
+                    <label class="sw-picker-item" data-name="{{.Name}}">
+                        <input type="checkbox" name="recipient" value="{{.ID}}" {{if index $.SelectedRecipients .ID}}checked{{end}}>
+                        <span>{{.Name}}</span>
+                    </label>
+                    {{else}}
+                    <p class="sw-picker-empty">No teachers found.</p>
+                    {{end}}
+                </div>
+            </details>
+
+            <p class="sw-notice" role="note">
+                <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                <span>Messaging the whole school is intentionally not available from this page.</span>
+            </p>
+
+            <div class="sw-field">
+                <label class="sw-label" for="body">Message</label>
+                <textarea class="sw-input sw-msg-body-preview" id="body" name="body" rows="6" required>{{.Body}}</textarea>
+            </div>
+
+            <div class="sw-field">
+                <p class="sw-label">Attachments</p>
+                <div class="sw-notice" role="note">
+                    <i class="fas fa-globe" aria-hidden="true"></i>
+                    <p>Uploaded files are stored permanently on EduPage's servers and are <strong>publicly readable by anyone who has the link</strong>. Do not attach anything sensitive. Maximum size: {{.MaxUploadMB}} MB per file.</p>
+                </div>
+                <div class="sw-attach-row">
+                    <input type="file" id="attachment-file">
+                    <button type="button" id="attachment-upload-btn" class="sw-btn">Attach file</button>
+                    <span id="attachment-status" class="sw-attach-status" role="status"></span>
+                </div>
+                <div id="attachment-chips" class="sw-attach-chips"></div>
+                <noscript>
+                    {{if .Attachments}}
+                        <ul>{{range .Attachments}}<li>{{.Name}}</li>{{end}}</ul>
+                    {{else}}
+                        <p class="sw-attach-status">Enable JavaScript to attach files.</p>
+                    {{end}}
+                </noscript>
+                <input type="hidden" name="attachments_json" id="attachments-json" value="{{.AttachmentsJSON}}">
+            </div>
+
+            <button type="submit" name="action" value="review" class="sw-btn sw-btn--solid sw-btn--block">Review &amp; send</button>
+        </form>
+    {{end}}
+</main>
+
+<script>
+(function () {
+    var filter = document.getElementById("recipient-filter");
+    if (filter) {
+        filter.addEventListener("input", function () {
+            var q = filter.value.trim().toLowerCase();
+            document.querySelectorAll(".sw-picker-item").forEach(function (el) {
+                var name = (el.getAttribute("data-name") || "").toLowerCase();
+                el.style.display = (q === "" || name.indexOf(q) !== -1) ? "" : "none";
+            });
+        });
+    }
+
+    var jsonField = document.getElementById("attachments-json");
+    var chipsEl = document.getElementById("attachment-chips");
+    var uploadBtn = document.getElementById("attachment-upload-btn");
+    var fileInput = document.getElementById("attachment-file");
+    var statusEl = document.getElementById("attachment-status");
+    if (!jsonField || !chipsEl) return;
+
+    var attachments = [];
+    try {
+        attachments = JSON.parse(jsonField.value || "[]") || [];
+    } catch (e) {
+        attachments = [];
+    }
+
+    function renderChips() {
+        jsonField.value = JSON.stringify(attachments);
+        chipsEl.innerHTML = "";
+        attachments.forEach(function (att, idx) {
+            var chip = document.createElement("span");
+            chip.className = "sw-chip";
+
+            var icon = document.createElement("i");
+            icon.className = "fas fa-paperclip";
+            icon.setAttribute("aria-hidden", "true");
+            chip.appendChild(icon);
+
+            var name = document.createElement("span");
+            name.className = "sw-chip-name";
+            name.textContent = att.name || att.file || "attachment";
+            chip.appendChild(name);
+
+            var remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "sw-chip-remove";
+            remove.setAttribute("aria-label", "Remove " + (att.name || "attachment"));
+            remove.textContent = "×";
+            remove.addEventListener("click", function () {
+                attachments.splice(idx, 1);
+                renderChips();
+            });
+            chip.appendChild(remove);
+
+            chipsEl.appendChild(chip);
+        });
+    }
+    renderChips();
+
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener("click", function () {
+            var file = fileInput.files && fileInput.files[0];
+            if (!file) {
+                statusEl.textContent = "Choose a file first.";
+                return;
+            }
+            var formData = new FormData();
+            formData.append("file", file);
+
+            uploadBtn.disabled = true;
+            statusEl.textContent = "Uploading…";
+
+            fetch("/messages/upload", { method: "POST", body: formData })
+                .then(function (resp) {
+                    return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
+                })
+                .then(function (result) {
+                    if (!result.ok || !result.data.ok) {
+                        statusEl.textContent = (result.data && result.data.error) || "Upload failed.";
+                        return;
+                    }
+                    attachments.push(result.data.attachment);
+                    renderChips();
+                    statusEl.textContent = "Attached “" + (result.data.attachment.name || "file") + "”.";
+                    fileInput.value = "";
+                })
+                .catch(function () {
+                    statusEl.textContent = "Upload failed — check your connection and try again.";
+                })
+                .finally(function () {
+                    uploadBtn.disabled = false;
+                });
+        });
+    }
+})();
+</script>
+
+{{template "swissthemejs"}}
+{{template "swisstabbar"}}
+</body>
+</html>{{end}}

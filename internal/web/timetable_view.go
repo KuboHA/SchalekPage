@@ -19,6 +19,13 @@ type periodView struct {
 	HasSubject  bool
 	Classrooms  string
 	Teachers    string
+
+	// IsCancelled marks a lesson EduPage removed or flagged absent. A
+	// cancelled lesson must never render like one that is going ahead.
+	IsCancelled bool
+	// IsEvent marks a calendar entry (trip, meeting, ...) rather than a lesson.
+	IsEvent bool
+	Groups  string
 }
 
 func joinTeacherNames(teachers []edupage.Teacher) string {
@@ -55,8 +62,11 @@ func subjectDisplayName(s *edupage.Subject) string {
 // via Python's `.capitalize()`).
 func buildPeriodView(l edupage.Lesson, titleCased bool) periodView {
 	pv := periodView{
-		Classrooms: joinClassroomNames(l.Classrooms),
-		Teachers:   joinTeacherNames(l.Teachers),
+		Classrooms:  joinClassroomNames(l.Classrooms),
+		Teachers:    joinTeacherNames(l.Teachers),
+		IsCancelled: l.IsCancelled,
+		IsEvent:     l.IsEvent,
+		Groups:      strings.Join(l.Groups, ", "),
 	}
 	if l.Period != nil {
 		pv.Period = strconv.Itoa(*l.Period)
@@ -134,4 +144,31 @@ func buildSubstitutionViews(changes []edupage.TimetableChange, className string)
 		})
 	}
 	return out
+}
+
+// ringingView is a presentation-ready bell time for the timetable gutter.
+type ringingView struct {
+	Type   string
+	Label  string
+	Time   string
+	Period string
+}
+
+// buildRingingView renders the next bell, or nil when the school published
+// no bell schedule. It costs no network request — the schedule is already in
+// the cached login payload.
+func buildRingingView(rt *edupage.RingingTime) *ringingView {
+	if rt == nil {
+		return nil
+	}
+	label := "Next lesson starts"
+	if rt.Type == edupage.RingingBreak {
+		label = "Next break starts"
+	}
+	return &ringingView{
+		Type:   string(rt.Type),
+		Label:  label,
+		Time:   rt.Time.Format("15:04"),
+		Period: rt.Period,
+	}
 }

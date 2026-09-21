@@ -34,9 +34,6 @@ ldflags() {
 PLATFORMS=(
 	linux/amd64
 	linux/arm64
-	darwin/amd64
-	darwin/arm64
-	windows/amd64
 )
 
 require_go() {
@@ -48,8 +45,9 @@ require_go() {
 
 cmd_build() {
 	require_go
-	echo ">> building $BINARY $(version)"
-	go build -trimpath -ldflags "$(ldflags)" -o "$BINARY" "$PKG"
+	echo ">> building $BINARY $(version) (static, linux/amd64)"
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+		go build -trimpath -tags netgo -ldflags "$(ldflags) -extldflags '-static'" -o "$BINARY" "$PKG"
 	echo ">> wrote ./$BINARY"
 }
 
@@ -108,9 +106,9 @@ cmd_dist() {
 		[ "$goos" = windows ] && out="$out.exe"
 
 		echo ">> building $goos/$goarch"
-		# CGO is off so each binary is fully static and needs no libc at runtime.
+		# CGO is off and netgo is forced so each binary is fully static and needs no libc at runtime.
 		CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
-			go build -trimpath -ldflags "$(ldflags)" -o "$out" "$PKG"
+			go build -trimpath -tags netgo -ldflags "$(ldflags) -extldflags '-static'" -o "$out" "$PKG"
 	done
 
 	echo ">> release binaries in $DIST/"
