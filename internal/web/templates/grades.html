@@ -1,0 +1,122 @@
+{{define "grades.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchalekPage</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body class="min-h-screen text-gray-100">
+    <!-- Enhanced Navbar -->
+    <nav class="bg-gradient-to-r from-slate-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/dashboard">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                        SchalekPage
+                    </h1>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {{if .Student}}
+                    <span class="text-sm text-gray-300">{{.Student.Name}}</span>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Added top padding to account for fixed navbar -->
+    <div class="max-w-5xl mx-auto px-4 py-5 pt-16 z-0">
+        <!-- New header section -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-graduation-cap text-2xl text-indigo-400"></i>
+                <h1 class="text-2xl font-bold text-white">Grades</h1>
+            </div>
+            {{if .HasOverall}}
+                <span class="px-3 py-1 rounded-full text-sm font-medium shadow-sm {{.OverallCls}}">
+                    Overall: {{.OverallInt}}
+                </span>
+            {{end}}
+        </div>
+
+        {{if .Subjects}}
+            <div class="space-y-4">
+                {{range .Subjects}}
+                    <div class="card rounded-xl p-4 hover:bg-gray-800/20 transition-colors duration-300">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-lg font-semibold text-indigo-300">{{.Subject}}</h2>
+
+                            {{if .HasAverage}}
+                                <div class="flex items-center gap-2">
+                                    {{if .HasPercent}}
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300">
+                                            {{.PercentAvg}}%
+                                        </span>
+                                    {{end}}
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium shadow-sm {{.AvgClass}}">
+                                        {{printf "%.0f" .Average}}
+                                    </span>
+                                </div>
+                            {{end}}
+                        </div>
+
+                        <div class="space-y-2">
+                            {{range .Grades}}
+                                <div class="card rounded-lg p-3 hover:bg-gray-800/50 transition-colors duration-200">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-3">
+                                                <span class="rounded-full text-sm font-medium px-2 py-0.5 {{.ColorClass}}">
+                                                    {{.GradeDisplay}}
+                                                </span>
+                                                <span class="text-sm font-medium text-white">{{.Title}}</span>
+                                            </div>
+                                            {{if .Comment}}
+                                                <p class="text-sm text-gray-400 mt-2 ml-1">
+                                                    <i class="fas fa-comment-alt text-indigo-400 mr-2"></i>
+                                                    {{.Comment}}
+                                                </p>
+                                            {{end}}
+                                            {{if .IsPercent}}
+                                                <p class="text-xs text-gray-400 mt-2">
+                                                    {{printf "%.1f" .Percent}}% ({{printf "%.0f" .MaxPoints}} max points)
+                                                </p>
+                                            {{end}}
+                                        </div>
+                                        <div class="text-right text-xs text-gray-400">
+                                            <p>
+                                                <i class="far fa-calendar text-indigo-400 mr-2"></i>
+                                                {{dateDMY .Date}}
+                                            </p>
+                                            {{if .Teacher}}
+                                                <p class="mt-1">
+                                                    <i class="fas fa-user text-indigo-400 mr-2"></i>
+                                                    {{.Teacher}}
+                                                </p>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        {{else}}
+            <div class="card rounded-xl p-8 text-center">
+                <div class="text-gray-400 mb-2">
+                    <i class="fas fa-graduation-cap text-4xl"></i>
+                </div>
+                <h3 class="text-xl font-medium text-gray-300">No grades available</h3>
+                <p class="text-gray-400 mt-2">Check back later for your academic progress</p>
+            </div>
+        {{end}}
+    </div>
+</body>
+</html>{{end}}

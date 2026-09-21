@@ -1,0 +1,198 @@
+{{define "lunches.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchalekPage - Lunches</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="min-h-screen text-gray-100 bg-gradient-to-br from-slate-900 to-gray-900">
+    <!-- Navbar with clickable title -->
+    <nav class="bg-gradient-to-r from-slate-900/90 to-indigo-900/80 backdrop-blur-md border-b border-indigo-500/10 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/dashboard" class="flex items-center">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                        SchalekPage
+                    </h1>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {{if .Student}}
+                    <span class="text-sm text-gray-300">{{.Student.Name}}</span>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Header with back button -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Lunch Menu</h1>
+                <p class="text-gray-400 text-sm">View and manage your lunch options</p>
+            </div>
+            <a href="/dashboard" class="bg-slate-800 hover:bg-slate-700 rounded-lg px-3 py-2 text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fas fa-arrow-left text-sm"></i>
+                <span class="text-sm">Back to dashboard</span>
+            </a>
+        </div>
+
+        <!-- Date Navigation -->
+        <div class="flex items-center gap-2 mb-6 overflow-x-auto py-2 scrollbar-hide">
+            {{$current := .CurrentDate}}
+            {{range .DateRange}}
+                {{$isCurrent := eq (dateYMD .) (dateYMD $current)}}
+                {{$wd := .Weekday}}
+                {{$isWeekend := or (eq $wd.String "Saturday") (eq $wd.String "Sunday")}}
+                <a href="/lunches/{{dateYMD .}}" class="flex-shrink-0 flex flex-col items-center p-3 rounded-xl transition-all
+                    {{if $isCurrent}}
+                        bg-blue-600 text-white shadow-lg
+                    {{else if $isWeekend}}
+                        bg-slate-800/50 text-gray-500
+                    {{else}}
+                        bg-slate-800/80 text-gray-300 hover:bg-slate-700
+                    {{end}}">
+                    <span class="text-xs uppercase {{if $isCurrent}}text-blue-200{{else}}text-gray-400{{end}}">
+                        {{dateShortDay .}}
+                    </span>
+                    <span class="text-xl font-bold mt-1">{{dateDay .}}</span>
+                    <span class="text-xs {{if $isCurrent}}text-blue-200{{else}}text-gray-400{{end}}">
+                        {{dateMon .}}
+                    </span>
+                </a>
+            {{end}}
+        </div>
+
+        <!-- Meals List -->
+        {{if .Meals}}
+            <div class="space-y-6">
+                {{range $meal := .Meals}}
+                    <div class="bg-slate-800/80 backdrop-blur rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+                        <!-- Meal Header -->
+                        <div class="bg-gradient-to-r from-slate-800 to-slate-700 p-4 border-b border-slate-600/30">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mr-3">
+                                        <i class="fas fa-utensils text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium text-white">{{$meal.Type}}</h3>
+                                        <p class="text-xs text-gray-400">
+                                            {{if eq $meal.OrderedMeal "A"}}
+                                                Menu I selected
+                                            {{else if eq $meal.OrderedMeal "B"}}
+                                                Menu II selected
+                                            {{else}}
+                                                No selection
+                                            {{end}}
+                                        </p>
+                                    </div>
+                                </div>
+                                {{if ne $meal.OrderedMeal "X"}}
+                                    <div class="bg-blue-900/30 px-3 py-1 rounded-full text-xs text-blue-300">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Selected
+                                    </div>
+                                {{else}}
+                                    <div class="bg-red-900/30 px-3 py-1 rounded-full text-xs text-red-300">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        Not Selected
+                                    </div>
+                                {{end}}
+                            </div>
+                        </div>
+
+                        <!-- Meal Options -->
+                        <div class="p-4">
+                            {{range $i, $menu := $meal.Menus}}
+                                {{$isSelected := menuOrdered $meal $menu}}
+                                {{$hasNumber := $menu.Number}}
+                                {{$isFirst := eq $i 0}}
+                                <div class="mb-4 last:mb-0">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="{{if $isSelected}}bg-blue-600{{else}}bg-slate-700{{end}} h-8 w-8 rounded-lg flex items-center justify-center shadow-inner">
+                                            {{if $hasNumber}}
+                                                <span class="font-medium text-sm">{{slice $menu.Number 0 1}}</span>
+                                            {{else if $isFirst}}
+                                                <i class="fas fa-utensil-spoon text-sm {{if $isSelected}}text-white{{else}}text-gray-400{{end}}"></i>
+                                            {{else}}
+                                                <i class="fas fa-utensils text-sm {{if $isSelected}}text-white{{else}}text-gray-400{{end}}"></i>
+                                            {{end}}
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    {{if $hasNumber}}
+                                                        <span class="font-medium text-sm">Menu {{$menu.Number}}</span>
+                                                    {{else if $isFirst}}
+                                                        <span class="font-medium text-sm text-gray-400">Soup</span>
+                                                    {{else}}
+                                                        <span class="font-medium text-sm text-gray-400">Side Dish</span>
+                                                    {{end}}
+                                                    {{if $isSelected}}
+                                                        <span class="bg-green-500 h-2 w-2 rounded-full"></span>
+                                                    {{end}}
+                                                </div>
+
+                                                {{if $isSelected}}
+                                                    <span class="text-xs bg-green-900/30 text-green-400 px-2 py-0.5 rounded-full">Selected</span>
+                                                {{end}}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="relative pl-11">
+                                        <!-- Vertical line connecting from number to content -->
+                                        <div class="absolute left-4 top-0 bottom-0 w-px {{if $isSelected}}bg-blue-500/50{{else}}bg-slate-700{{end}}"></div>
+
+                                        <!-- Menu content -->
+                                        <div class="{{if $isSelected}}bg-gradient-to-r from-blue-900/10 to-transparent border-l-2 border-blue-500{{else}}bg-slate-700/20 border-l-2 border-slate-700{{end}} p-3 rounded-r-lg">
+                                            <p class="text-sm {{if $isSelected}}text-white{{else}}text-gray-300{{end}}">
+                                                {{$menu.Name}}
+                                            </p>
+
+                                            {{if $menu.Allergens}}
+                                                <div class="mt-2 flex items-center text-xs text-gray-400">
+                                                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-1.5"></i>
+                                                    <span>Allergens: {{$menu.Allergens}}</span>
+                                                </div>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        {{else}}
+            <div class="bg-slate-800/80 rounded-xl p-8 text-center shadow-lg border border-slate-700/50">
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-900/20 flex items-center justify-center mb-4">
+                        <i class="fas fa-utensils text-blue-400 text-2xl"></i>
+                    </div>
+                    <p class="text-white font-medium mb-2">No meals available</p>
+                    <p class="text-sm text-gray-400 max-w-xs">There are no meal options available for this date. Try selecting a different day.</p>
+                </div>
+            </div>
+        {{end}}
+    </div>
+
+    <style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body>
+</html>{{end}}

@@ -1,3 +1,14 @@
+# Go build output
+/schalekpage
+/dist/
+*.test
+*.out
+
+# Legacy Python
+__pycache__/
+*.py[cod]
+.venv/
+
 *.json
 tailwind.config.js
 node_modules/
