@@ -24,9 +24,9 @@
    -------------------------------------------------------------------------- */
 
 :root {
-  --font-display: "Inter Tight", "Helvetica Neue", Helvetica, Inter, Arial, sans-serif;
-  --font-text: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-text: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   /* Swiss grid: everything lands on an 8px rhythm. */
   --gutter: 1.5rem;
@@ -64,7 +64,19 @@
   --tint-2: rgba(250, 250, 250, 0.11);
   --tint-3: rgba(250, 250, 250, 0.18);
 
-  --focus: #fafafa;
+  /* The one hue in the system. It marks *where you are* and *what is live*
+     — active nav, the current lesson, an order you placed, the primary
+     action — and nothing else. Everything decorative stays grayscale. */
+  --accent: #5b8fd6;        /* 6.3:1 on black — safe for type */
+  --accent-strong: #84acdf;  /* hover / pressed */
+  --accent-fill: #2f5fa8;    /* solid blocks, white type on top */
+  --accent-fill-hover: #376cb8;  /* stays >= 5:1 against white type */
+  --accent-fill-ink: #ffffff;
+  --accent-soft: rgba(91, 143, 214, 0.14);
+  --accent-softer: rgba(91, 143, 214, 0.07);
+  --accent-line: rgba(91, 143, 214, 0.45);
+
+  --focus: var(--accent);
 }
 
 [data-theme="light"] {
@@ -90,7 +102,16 @@
   --tint-2: rgba(0, 0, 0, 0.09);
   --tint-3: rgba(0, 0, 0, 0.15);
 
-  --focus: #000000;
+  --accent: #1c4f8f;         /* 8.2:1 on white */
+  --accent-strong: #143c6e;
+  --accent-fill: #1c4f8f;
+  --accent-fill-hover: #143c6e;
+  --accent-fill-ink: #ffffff;
+  --accent-soft: rgba(28, 79, 143, 0.09);
+  --accent-softer: rgba(28, 79, 143, 0.045);
+  --accent-line: rgba(28, 79, 143, 0.35);
+
+  --focus: var(--accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -278,6 +299,19 @@ strong, b {
   color: var(--ink);
 }
 
+/* ...except on a surface that has already inverted or filled its own
+   background. Forcing --ink there painted near-white type onto a near-white
+   block: the emphasised clause of the attachment warning on /messages was
+   invisible in the dark theme, which is the one clause that most needs
+   reading. Weight still carries the emphasis. */
+.sw-notice strong, .sw-notice b,
+.sw-badge--solid strong, .sw-badge--solid b,
+.sw-btn--solid strong, .sw-btn--solid b,
+.sw-upnext-period strong, .sw-upnext-period b,
+[class*="--solid"] strong, [class*="--solid"] b {
+  color: inherit;
+}
+
 hr {
   border: 0;
   border-top: var(--rule-bold) solid var(--ink);
@@ -300,7 +334,8 @@ hr {
 .sw-grade,
 .timetable td,
 .mobile-period-number,
-.mobile-class-room {
+.sw-lesson-room,
+.sw-lesson-period {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -338,25 +373,46 @@ hr {
 }
 
 /* --------------------------------------------------------------------------
-   6. Navigation bar
+   6. Navigation
+   ONE primary navigation per breakpoint, never two:
+
+     • wide  (>= 900px) — the top bar carries the full link row. The bottom
+                          tab bar is hidden.
+     • phone (<  900px) — the top bar keeps identity and the theme switch
+                          only; routing lives in the bottom tab bar, whose
+                          fifth slot opens a sheet with the overflow
+                          destinations and the account actions.
+
+   Nothing else in the app may render a list of destinations. The dashboard
+   used to repeat four of them as a tile grid, which is what made the phone
+   show three navigations at once.
    -------------------------------------------------------------------------- */
 
 .sw-nav {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--canvas);
-  border-bottom: var(--rule-bold) solid var(--ink);
+  background: color-mix(in srgb, var(--canvas) 88%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: var(--rule-hair) solid var(--rule-2);
+}
+
+/* The accent hairline under the bar: the one place the hue touches chrome. */
+.sw-nav::after {
+  content: "";
+  display: block;
+  height: var(--rule-bold);
+  background: var(--accent-fill);
 }
 
 .sw-nav-inner {
   max-width: 80rem;
   margin: 0 auto;
   padding: 0 var(--gutter);
-  height: 3.5rem;
+  height: 3.25rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
 }
 
@@ -368,46 +424,95 @@ hr {
   text-transform: uppercase;
   color: var(--ink);
   white-space: nowrap;
+  flex: none;
 }
 .sw-brand span {
-  color: var(--ink-3);
+  color: var(--accent);
 }
 .sw-brand:hover span {
+  color: var(--accent-strong);
+}
+
+/* Primary link row — wide screens only. */
+.sw-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 0.75rem;
+}
+
+.sw-nav-links a {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.625rem;
+  height: 3.25rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  transition: color var(--speed) var(--ease);
+}
+.sw-nav-links a:hover {
   color: var(--ink);
+}
+
+/* Active route: an accent underline sitting on the bar's own bottom rule. */
+.sw-nav-links a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+.sw-nav-links a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0;
+  height: var(--rule-heavy);
+  background: var(--accent);
 }
 
 .sw-nav-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
+  flex: none;
   min-width: 0;
 }
 
 .sw-user {
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 12ch;
 }
 
-/* Theme switcher — two hard-edged halves, the active one inverted. */
+/* Theme switcher — two hard-edged halves, the active one accent-filled. */
 .sw-theme {
   display: inline-flex;
-  border: var(--rule-hair) solid var(--ink);
+  border: var(--rule-hair) solid var(--rule-2);
   flex: none;
 }
 
 .sw-theme button {
   appearance: none;
-  background: var(--canvas);
+  background: transparent;
   color: var(--ink-3);
   border: 0;
-  width: 2rem;
-  height: 1.75rem;
+  width: 1.875rem;
+  height: 1.625rem;
   display: grid;
   place-items: center;
   font-size: 0.6875rem;
@@ -415,17 +520,40 @@ hr {
 }
 
 .sw-theme button + button {
-  border-left: var(--rule-hair) solid var(--ink);
+  border-left: var(--rule-hair) solid var(--rule-2);
 }
 
 .sw-theme button:hover {
   color: var(--ink);
+  background: var(--tint-1);
 }
 
 [data-theme="light"] .sw-theme button[data-set-theme="light"],
 [data-theme="dark"] .sw-theme button[data-set-theme="dark"] {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
+  background: var(--accent-fill);
+  color: var(--accent-fill-ink);
+}
+
+/* The student's name is the first thing to go when the bar gets tight: it
+   is identification, not navigation, and it still shows in the "More" sheet
+   on a phone. Without this it collided with the last link around 950px. */
+@media (max-width: 1150px) {
+  .sw-nav .sw-user {
+    display: none;
+  }
+}
+
+/* Below the desktop breakpoint the link row and the name give way to the
+   tab bar; only identity and the theme switch stay up top. */
+@media (max-width: 899px) {
+  .sw-nav-links,
+  .sw-nav .sw-user,
+  .sw-nav-signout {
+    display: none;
+  }
+  .sw-nav-inner {
+    justify-content: space-between;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -442,8 +570,9 @@ hr {
 }
 
 .sw-head {
-  padding: 2.5rem 0 1.25rem;
-  border-bottom: var(--rule-heavy) solid var(--ink);
+  position: relative;
+  padding: 2.25rem 0 1.125rem;
+  border-bottom: var(--rule-hair) solid var(--rule-2);
   margin-bottom: 2rem;
   display: flex;
   flex-wrap: wrap;
@@ -463,12 +592,24 @@ hr {
   margin-bottom: 0.625rem;
 }
 
+.sw-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 4rem;
+  height: var(--rule-heavy);
+  background: var(--accent);
+}
+
+/* Down from clamp(2.25rem, 8vw, 4.25rem): at 4.25rem the title plus its
+   slab rule pushed the first real content below the fold on a phone. */
 .sw-title {
   font-family: var(--font-display);
-  font-size: clamp(2.25rem, 8vw, 4.25rem);
+  font-size: clamp(1.875rem, 6vw, 3.25rem);
   font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 0.9;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
   text-transform: uppercase;
   color: var(--ink);
 }
@@ -481,19 +622,31 @@ hr {
 }
 
 .sw-section-title {
+  position: relative;
   font-family: var(--font-text);
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink);
   padding-bottom: 0.625rem;
-  margin-bottom: 1rem;
-  border-bottom: var(--rule-bold) solid var(--ink);
+  margin-bottom: 0.75rem;
+  border-bottom: var(--rule-hair) solid var(--rule-2);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
+}
+/* A short accent lead-in replaces the full-width heavy rule the headings
+   used to carry — the hierarchy reads without the whole row going black. */
+.sw-section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 2.5rem;
+  height: var(--rule-bold);
+  background: var(--accent);
 }
 
 .sw-link {
@@ -501,13 +654,14 @@ hr {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink);
-  border-bottom: var(--rule-hair) solid var(--ink-3);
+  color: var(--accent);
+  border-bottom: var(--rule-hair) solid var(--accent-line);
   padding-bottom: 1px;
-  transition: border-color var(--speed) var(--ease);
+  transition: border-color var(--speed) var(--ease), color var(--speed) var(--ease);
 }
 .sw-link:hover {
-  border-color: var(--ink);
+  color: var(--accent-strong);
+  border-color: var(--accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -583,16 +737,20 @@ hr {
   transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
 }
 .sw-btn:hover {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
+/* The primary action is the one place a filled block appears in a form. */
 .sw-btn--solid {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-fill-ink);
 }
 .sw-btn--solid:hover {
-  background: var(--canvas);
-  color: var(--ink);
+  background: var(--accent-fill-hover);
+  border-color: var(--accent-fill-hover);
+  color: var(--accent-fill-ink);
 }
 .sw-btn--block {
   width: 100%;
@@ -610,53 +768,6 @@ hr {
 }
 .sw-btn-group .sw-btn + .sw-btn {
   margin-left: -1px;
-}
-
-/* The old ad-hoc "back to dashboard" pill, restyled as a rule-and-arrow. */
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  margin-bottom: 1.5rem;
-  padding: 0;
-  background: none;
-  border: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  transition: color var(--speed) var(--ease);
-}
-.back-button:hover {
-  color: var(--ink);
-  transform: none;
-}
-.back-button .icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  display: grid;
-  place-items: center;
-  border: var(--rule-hair) solid currentColor;
-  background: none;
-  box-shadow: none;
-  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
-}
-.back-button:hover .icon {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
-  transform: none;
-}
-.back-button .icon i {
-  font-size: 0.625rem;
-  color: inherit;
-}
-.back-button span {
-  margin: 0;
-  font-size: inherit;
-  letter-spacing: inherit;
 }
 
 /* Form fields */
@@ -734,12 +845,13 @@ hr {
   white-space: nowrap;
 }
 
-/* Cancelled / removed — the loudest state: a solid inverted block. */
+/* The loudest state — "this specific one": the menu you ordered, the term
+   you are viewing, an assignment past its date. */
 .badge-red,
 .sw-badge--solid {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
-  border-color: var(--invert-bg);
+  background: var(--accent-fill);
+  color: var(--accent-fill-ink);
+  border-color: var(--accent-fill);
 }
 
 /* Change / substitution — outlined in full ink. */
@@ -938,158 +1050,11 @@ td .inline-block.w-7 {
 }
 
 /* --------------------------------------------------------------------------
-   12. Dashboard mobile cards
+   12. Period marker + mobile period cards (timetable / substitutions)
+   The dashboard's swipe-carousel cards that used to live here are gone: the
+   dashboard now renders one list per section at every width instead of a
+   phone copy and a desktop copy of the same data.
    -------------------------------------------------------------------------- */
-
-.mobile-info-cards {
-  display: flex;
-  margin: 0 0 1rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  gap: 0;
-  padding-bottom: 0.5rem;
-}
-.mobile-info-cards::-webkit-scrollbar {
-  display: none;
-}
-
-.mobile-info-card {
-  scroll-snap-align: start;
-  flex: 0 0 88%;
-  max-width: 88%;
-  margin-right: 0.75rem;
-  background: var(--surface);
-  border: var(--rule-hair) solid var(--rule);
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0 !important;
-  overflow: hidden;
-}
-
-.mobile-card-header {
-  padding: 0.625rem 0.875rem;
-  border-bottom: var(--rule-bold) solid var(--ink);
-  background: transparent;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-}
-.mobile-card-header h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-family: var(--font-text);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink);
-}
-.mobile-card-header .mobile-card-icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  display: grid;
-  place-items: center;
-  border-radius: 0;
-  font-size: 0.625rem;
-  background: var(--invert-bg);
-  color: var(--invert-ink);
-}
-.mobile-lunch-icon,
-.mobile-timetable-icon {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
-}
-
-.mobile-card-link {
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink);
-  background: none;
-  padding: 0;
-  border-bottom: var(--rule-hair) solid var(--ink-3);
-}
-.mobile-card-link:active {
-  transform: none;
-  border-color: var(--ink);
-}
-
-.mobile-card-content {
-  padding: 0.75rem 0.875rem;
-  max-height: 26vh;
-  overflow-y: auto;
-}
-
-.mobile-lunch-item {
-  position: relative;
-  padding: 0.5rem 0 0.625rem;
-  border-radius: 0;
-  background: transparent;
-  border-bottom: var(--rule-hair) solid var(--rule);
-  margin: 0;
-}
-.mobile-lunch-item:last-child {
-  border-bottom: 0;
-}
-.mobile-lunch-ordered {
-  background: transparent;
-  border: 0;
-  border-bottom: var(--rule-hair) solid var(--rule);
-  padding-left: 0.75rem;
-}
-.mobile-lunch-ordered::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.5rem;
-  bottom: 0.625rem;
-  width: var(--rule-bold);
-  background: var(--ink);
-  border-radius: 0;
-}
-.mobile-lunch-menu-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-bottom: 0.25rem;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0;
-  background: var(--invert-bg);
-  color: var(--invert-ink);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.mobile-lunch-text {
-  font-size: 0.8125rem;
-  line-height: 1.35;
-  color: var(--ink-2);
-}
-.mobile-lunch-ordered .mobile-lunch-text {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-.mobile-timetable-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.625rem;
-  padding: 0.5rem 0;
-  border-radius: 0;
-  background: transparent;
-  border-bottom: var(--rule-hair) solid var(--rule);
-  margin: 0;
-}
-.mobile-timetable-item:last-child {
-  border-bottom: 0;
-}
 
 .mobile-period-number {
   width: 1.5rem;
@@ -1106,91 +1071,13 @@ td .inline-block.w-7 {
   flex-shrink: 0;
 }
 
-.mobile-class-info {
-  flex: 1;
-  min-width: 0;
-}
-.mobile-class-subject {
-  font-family: var(--font-display);
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  margin-bottom: 0.125rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.mobile-class-details {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.6875rem;
-}
-.mobile-class-teacher {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  max-width: 70%;
-  color: var(--ink-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.mobile-class-room {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.05rem 0.3rem;
-  border: var(--rule-hair) solid var(--rule-2);
-  border-radius: 0;
-  background: transparent;
-  color: var(--ink);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.mobile-empty-message {
-  text-align: center;
-  padding: 1.5rem 0;
-  color: var(--ink-3);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.mobile-empty-message i {
-  display: block;
-  font-size: 1.25rem;
-  margin-bottom: 0.625rem;
-  color: var(--ink-4);
-}
-
-.mobile-pagination {
-  display: flex;
-  justify-content: flex-start;
-  gap: 0.25rem;
-  margin-bottom: 1.5rem;
-}
-.mobile-pagination-dot {
-  width: 1.5rem;
-  height: 2px;
-  border-radius: 0 !important;
-  background: var(--rule-2);
-  transition: background var(--speed) var(--ease);
-}
-.mobile-pagination-dot.active {
-  background: var(--ink);
-  transform: none;
-}
-
 /* Mobile period cards on timetable / substitutions */
 .mobile-period-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 0.875rem 0.875rem 0.875rem 1.125rem;
-  margin-bottom: 0.5rem;
+  padding: 0.625rem 0.75rem 0.625rem 0.9375rem;
+  margin-bottom: 0.375rem;
   background: transparent;
   border: var(--rule-hair) solid var(--rule);
   border-radius: 0;
@@ -1202,7 +1089,7 @@ td .inline-block.w-7 {
   bottom: -1px;
   left: -1px;
   width: var(--rule-bold);
-  background: var(--ink);
+  background: var(--rule-2);
   border-radius: 0;
 }
 .mobile-period-header {
@@ -1234,18 +1121,21 @@ td .inline-block.w-7 {
 }
 .mobile-period-details {
   display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin-top: 0.625rem;
-  padding-top: 0.625rem;
-  border-top: var(--rule-hair) solid var(--rule);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.875rem;
+  margin-top: 0.1875rem;
+  padding-left: 2.125rem;
+}
+.mobile-period-details:empty {
+  display: none;
 }
 .mobile-period-detail {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
   font-size: 0.75rem;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 .mobile-period-detail i {
   width: 1rem;
@@ -1425,54 +1315,6 @@ td .inline-block.w-7 {
     flex-direction: column;
   }
 
-  /* Quick actions become a four-across band of labelled squares. */
-  .btn-mobile {
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    height: 4.25rem;
-    padding: 0.5rem 0.25rem !important;
-    background: transparent;
-    border: var(--rule-hair) solid var(--rule-2);
-    border-radius: 0 !important;
-    transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease);
-  }
-  .btn-mobile:active {
-    background: var(--invert-bg);
-    color: var(--invert-ink);
-    border-color: var(--invert-bg);
-    transform: none;
-  }
-  .btn-mobile:active .btn-icon-mobile i,
-  .btn-mobile:active .btn-text-mobile {
-    color: var(--invert-ink);
-  }
-  .btn-icon-mobile {
-    width: auto !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-  }
-  .btn-icon-mobile i {
-    font-size: 1.0625rem !important;
-    color: var(--ink) !important;
-    animation: none !important;
-  }
-  .btn-text-mobile {
-    display: block !important;
-    margin: 0 !important;
-    font-size: 0.5rem !important;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    text-align: center;
-  }
-
   .mobile-touch-target,
   .mobile-tap-area {
     min-height: 44px;
@@ -1522,7 +1364,8 @@ td .inline-block.w-7 {
   }
   .sw-nav,
   .sw-theme,
-  .back-button,
+  .sw-tabbar,
+  .sw-upnext,
   .sw-btn-group {
     display: none !important;
   }
@@ -1727,7 +1570,8 @@ td .inline-block.w-7 {
 
 @media (max-width: 640px) {
   .sw-grade-row {
-    grid-template-columns: 2.25rem minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.75rem;
     row-gap: 0.5rem;
   }
   .sw-grade-meta {
@@ -1774,8 +1618,9 @@ td .inline-block.w-7 {
   color: var(--ink-4);
 }
 .sw-date.is-current {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
+  background: var(--accent-fill);
+  color: var(--accent-fill-ink);
+  border-right-color: var(--accent-fill);
 }
 
 .sw-date-dow,
@@ -1803,11 +1648,12 @@ td .inline-block.w-7 {
 
 .sw-meal-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
   padding-bottom: 0.625rem;
-  border-bottom: var(--rule-bold) solid var(--ink);
+  border-bottom: var(--rule-bold) solid var(--accent-fill);
 }
 
 .sw-meal-type {
@@ -1846,10 +1692,13 @@ td .inline-block.w-7 {
   font-weight: 800;
   color: var(--ink-3);
 }
+.sw-menu.is-selected {
+  background: var(--accent-softer);
+}
 .sw-menu.is-selected .sw-menu-key {
-  background: var(--invert-bg);
-  border-color: var(--invert-bg);
-  color: var(--invert-ink);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-fill-ink);
 }
 
 .sw-menu-label {
@@ -1881,49 +1730,309 @@ td .inline-block.w-7 {
    19. Dashboard
    -------------------------------------------------------------------------- */
 
-.sw-actions {
+/* "Up next" — the dashboard's answer to the only question it is opened to
+   answer. It replaces the tile grid that used to sit here repeating four
+   links the navigation already carried. */
+
+.sw-upnext {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0 1.25rem;
   margin-bottom: 2rem;
-  border: var(--rule-hair) solid var(--rule-2);
-  border-left: 0;
+  padding: 1.125rem 1.25rem;
+  border: var(--rule-hair) solid var(--accent-line);
+  border-left: var(--rule-heavy) solid var(--accent-fill);
+  background: var(--accent-softer);
 }
 
-.sw-action,
-.sw-actions .btn-mobile {
-  border: 0 !important;
-  border-left: var(--rule-hair) solid var(--rule-2) !important;
-}
-
-.sw-action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.75rem;
-  min-height: 6.5rem;
-  padding: 1rem;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
-}
-.sw-action:hover {
-  background: var(--invert-bg);
-  color: var(--invert-ink);
-}
-.sw-action-icon i {
-  font-size: 1.125rem;
-  color: inherit;
-}
-.sw-action-label {
+.sw-upnext-period {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  background: var(--accent-fill);
+  color: var(--accent-fill-ink);
   font-family: var(--font-display);
-  font-size: 0.9375rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-upnext-label {
+  grid-column: 2;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.sw-upnext-subject {
+  grid-column: 2;
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 3.4vw, 1.375rem);
   font-weight: 800;
   letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.sw-upnext-meta {
+  grid-column: 3;
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.sw-upnext-time {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* Nothing left today — same block, no hue, so "done" reads as calm. */
+.sw-upnext--idle {
+  border-color: var(--rule-2);
+  border-left-color: var(--rule-2);
+  background: transparent;
+}
+.sw-upnext--idle .sw-upnext-period {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 1rem;
+}
+.sw-upnext--idle .sw-upnext-label {
+  color: var(--ink-3);
+}
+/* There is no time or room to show once the day is over, and the empty
+   meta row was still drawing its divider. */
+.sw-upnext--idle .sw-upnext-meta {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .sw-upnext {
+    grid-template-columns: auto 1fr;
+    padding: 1rem;
+    gap: 0 0.875rem;
+  }
+  .sw-upnext-meta {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: var(--rule-hair) solid var(--accent-line);
+    text-align: left;
+  }
+  .sw-upnext--idle .sw-upnext-meta {
+    border-top-color: var(--rule);
+  }
+}
+
+/* Dashboard body: one grid for every width. The mobile and desktop trees
+   used to be two separate copies of the same content toggled with utility
+   classes — which is how the phone ended up rendering the action tiles
+   twice. There is now a single tree. */
+
+.sw-dash {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .sw-dash {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    gap: 3rem;
+  }
+  .sw-dash-rail {
+    position: sticky;
+    top: 5rem;
+    display: grid;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 899px) {
+  .sw-dash-rail {
+    display: grid;
+    gap: 2.5rem;
+  }
+  /* On a phone the day's own facts outrank the notification feed. */
+  .sw-dash-rail { order: -1; }
+}
+
+/* ---- Lesson rows (dashboard's day list) ---------------------------------- */
+
+.sw-lesson-list,
+.sw-dish-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sw-lesson {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0 0.75rem;
+  padding: 0.625rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+}
+.sw-lesson:last-child {
+  border-bottom: 0;
+}
+
+.sw-lesson-period {
+  grid-row: span 2;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-lesson-subject {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-lesson-room {
+  grid-column: 3;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  padding: 0.0625rem 0.375rem;
+  border: var(--rule-hair) solid var(--rule-2);
+  white-space: nowrap;
+}
+
+.sw-lesson-meta {
+  grid-column: 2 / -1;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sw-lesson-meta .sw-lesson-time {
+  font-variant-numeric: tabular-nums;
+}
+.sw-lesson-meta > * + *::before {
+  content: "·";
+  margin: 0 0.375rem;
+  color: var(--ink-4);
+}
+
+.sw-lesson--cancelled .sw-lesson-subject {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+/* The lesson happening now, or the one coming up next. */
+.sw-lesson.is-now {
+  background: var(--accent-softer);
+  box-shadow: inset var(--rule-heavy) 0 0 0 var(--accent);
+  padding-left: 0.75rem;
+}
+.sw-lesson.is-now .sw-lesson-period {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-fill-ink);
+}
+
+/* ---- Lunch rows ---------------------------------------------------------- */
+
+.sw-dish {
+  padding: 0.625rem 0;
+  border-bottom: var(--rule-hair) solid var(--rule);
+}
+.sw-dish:last-child {
+  border-bottom: 0;
+}
+
+.sw-dish-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.1875rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: inherit;
+  color: var(--ink-3);
+}
+
+.sw-dish-name {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+.sw-dish-note {
+  color: var(--accent);
+}
+.sw-dish-note::before {
+  content: "\2713";
+  margin-right: 0.25rem;
+}
+
+.sw-dish.is-ordered {
+  background: var(--accent-softer);
+  box-shadow: inset var(--rule-heavy) 0 0 0 var(--accent);
+  padding-left: 0.75rem;
+}
+.sw-dish.is-ordered .sw-dish-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---- Compact empty state (inside a panel, not a whole page) --------------- */
+
+.sw-empty--inline {
+  padding: 1.5rem 0;
+  text-align: left;
+}
+.sw-empty--inline i {
+  font-size: 1.125rem;
+  color: var(--ink-4);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.sw-empty--inline p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
 }
 
 .sw-panel {
@@ -1951,7 +2060,8 @@ li:last-child > .sw-mini,
 }
 .sw-mini.is-selected {
   padding-left: 0.625rem;
-  border-left: var(--rule-bold) solid var(--ink);
+  border-left: var(--rule-bold) solid var(--accent);
+  background: var(--accent-softer);
 }
 
 .sw-note {
@@ -1974,16 +2084,6 @@ li:last-child > .sw-mini,
 }
 .sw-replies > * + * {
   margin-top: 0.875rem;
-}
-
-/* The class happening right now, or the one coming up next. */
-.highlighted-class {
-  position: relative;
-  background: var(--tint-2) !important;
-  padding-left: 0.625rem !important;
-  border-left: var(--rule-heavy) solid var(--ink) !important;
-  transform: none;
-  box-shadow: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -2082,32 +2182,24 @@ li:last-child > .sw-mini,
   background: var(--surface-2);
 }
 
-@media (max-width: 768px) {
-  .sw-actions {
-    margin-bottom: 1.5rem;
-  }
-  .sw-action {
-    min-height: 0;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.75rem 0.5rem;
-  }
-}
-
 /* --------------------------------------------------------------------------
-   21. Bottom tab bar (phones + installed PWA)
-   A fixed, thumb-reach nav that mirrors native app chrome. Hidden on
-   anything wider than a phone, where the top nav + quick actions already
-   cover navigation.
+   21. Bottom tab bar + overflow sheet (phones + installed PWA)
+
+   The phone's single navigation. Four destinations earn a permanent slot;
+   the rest live behind "More", which opens a sheet that also holds the
+   account actions the top bar sheds on small screens. Eight equal tabs used
+   to force the bar to scroll sideways, which hid half the app behind a
+   gesture nothing advertised.
    -------------------------------------------------------------------------- */
 
-.sw-tabbar {
+.sw-tabbar,
+.sw-more {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 899px) {
   body.has-tabbar {
-    padding-bottom: calc(3.75rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
   }
 
   .sw-tabbar {
@@ -2116,53 +2208,213 @@ li:last-child > .sw-mini,
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 50;
-    background: var(--canvas);
-    border-top: var(--rule-bold) solid var(--ink);
+    z-index: 55;
+    background: color-mix(in srgb, var(--canvas) 92%, transparent);
+    backdrop-filter: saturate(160%) blur(12px);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    border-top: var(--rule-hair) solid var(--rule-2);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* With eight destinations, eight equal flex children squeeze each label
-     below a legible width on a narrow phone. Allow the bar to scroll
-     horizontally and give each tab a floor width instead, so labels stay
-     readable and the overflow is reachable by swipe. */
-  .sw-tabbar {
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+  /* The "More" disclosure is a tab-shaped flex child; its panel escapes the
+     bar with position: fixed. */
+  .sw-more {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
   }
-  .sw-tabbar::-webkit-scrollbar {
+  .sw-more > summary {
+    list-style: none;
+    width: 100%;
+    /* Stays above the sheet's own scrim so the tab that opened the sheet is
+       still the tab that closes it. Without this the panel buried it, and
+       with scripting off the "Close" button below does nothing — the sheet
+       would have had no way out. */
+    position: relative;
+    z-index: 61;
+  }
+  .sw-more > summary::-webkit-details-marker,
+  .sw-more > summary::marker {
     display: none;
+    content: "";
   }
 
   .sw-tab {
-    flex: 1 0 auto;
-    min-width: 4.25rem;
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
-    height: 3.75rem;
+    gap: 0.1875rem;
+    height: 3.5rem;
+    background: transparent;
+    border: 0;
     color: var(--ink-3);
+    font-family: inherit;
     font-size: 0.5625rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     text-align: center;
     -webkit-tap-highlight-color: transparent;
+    transition: color var(--speed) var(--ease);
   }
 
   .sw-tab i {
     font-size: 1.0625rem;
   }
 
-  .sw-tab[aria-current="page"] {
-    color: var(--ink);
+  .sw-tab span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Active tab: accent type under a short accent cap rule. */
+  .sw-tab[aria-current="page"],
+  .sw-tab.is-active {
+    color: var(--accent);
+  }
+  .sw-tab[aria-current="page"]::before,
+  .sw-tab.is-active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1.75rem;
+    height: var(--rule-bold);
+    background: var(--accent);
   }
 
   .sw-tab:active {
+    background: var(--accent-softer);
+  }
+
+  .sw-more[open] > summary {
+    color: var(--accent);
+    background: var(--canvas);
+  }
+  .sw-more[open] > summary::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1.75rem;
+    height: var(--rule-bold);
+    background: var(--accent);
+  }
+
+  /* ---- Overflow sheet ---- */
+
+  .sw-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+  }
+
+  .sw-sheet-scrim {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--canvas) 70%, transparent);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: sw-sheet-fade 180ms var(--ease) both;
+  }
+
+  .sw-sheet-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* Sits on top of the tab bar rather than over it. */
+    bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    background: var(--canvas);
+    border-top: var(--rule-bold) solid var(--accent-fill);
+    padding: 1.125rem var(--gutter) 1.125rem;
+    animation: sw-sheet-rise 220ms var(--ease) both;
+  }
+
+  /* <details> has no closing transition to hook, so the open state animates
+     in and the close is immediate — which is also what a dismissal should
+     feel like. */
+  @keyframes sw-sheet-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes sw-sheet-rise {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .sw-sheet-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.625rem;
+    margin-bottom: 0.75rem;
+    border-bottom: var(--rule-hair) solid var(--rule);
+  }
+
+  .sw-sheet-links {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .sw-sheet-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 3rem;
+    padding: 0 0.875rem;
+    border: var(--rule-hair) solid var(--rule-2);
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sw-sheet-link i {
+    font-size: 0.9375rem;
+    color: var(--ink-3);
+    width: 1.125rem;
+    text-align: center;
+  }
+  .sw-sheet-link[aria-current="page"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .sw-sheet-link[aria-current="page"] i {
+    color: var(--accent);
+  }
+  .sw-sheet-link:active {
     background: var(--tint-1);
+  }
+
+  .sw-sheet-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.875rem;
+    border-top: var(--rule-hair) solid var(--rule);
+  }
+
+  body.sw-sheet-open {
+    overflow: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-sheet-panel,
+  .sw-sheet-scrim {
+    animation: none;
   }
 }
 
@@ -2273,11 +2525,22 @@ li:last-child > .sw-mini,
 .mobile-period-card.is-event {
   border-left: var(--rule-heavy) solid var(--rule-2);
 }
+.mobile-period-card.is-now,
+.timetable-row.is-now {
+  background: var(--accent-softer);
+}
+.mobile-period-card.is-now::before {
+  background: var(--accent);
+}
+.mobile-period-card.is-now .mobile-period-number,
+.timetable-row.is-now .sw-period {
+  background: var(--accent-fill);
+  color: var(--accent-fill-ink);
+}
 .mobile-period-flags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
-  margin-top: 0.5rem;
 }
 
 /* Assignment lists shared by /homework and /exams. */
@@ -2311,7 +2574,7 @@ li:last-child > .sw-mini,
   opacity: 0.6;
 }
 .sw-item--warn {
-  border-left: var(--rule-heavy) solid var(--ink-3);
+  border-left: var(--rule-heavy) solid var(--accent);
   padding-left: 0.75rem;
 }
 .sw-item-icon {
@@ -2342,26 +2605,25 @@ li:last-child > .sw-mini,
   line-height: 1.45;
 }
 
-/* Desktop top-nav links. The bottom tab bar is phone-only, so without these
-   the newer pages have no clickable route on a wide screen. */
-.sw-nav-links {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  margin-left: 1.5rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+/* (The desktop top-nav link styles now live with the rest of the navigation
+   in section 6, so the two halves of the navbar can't drift apart.) */
+
+/* --------------------------------------------------------------------------
+   Cross-document view transitions.
+
+   The service worker serves the next destination from the on-device cache,
+   so the browser can cross-fade between two fully-formed documents instead
+   of flashing white. Purely progressive: browsers without support ignore
+   the rule and navigate normally.
+   -------------------------------------------------------------------------- */
+@view-transition {
+  navigation: auto;
 }
-.sw-nav-links a {
-  color: var(--ink-3);
-  text-decoration: none;
-}
-.sw-nav-links a:hover {
-  color: var(--ink);
-}
-@media (max-width: 768px) {
-  .sw-nav-links { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }

@@ -94,505 +94,213 @@
 <head>
 {{template "swisshead" "Dashboard"}}
 </head>
-<body class="mobile-safe-bottom has-tabbar" data-nav="dashboard">
-    <!-- Modernized Navbar -->
+<body class="mobile-safe-bottom has-tabbar" data-nav="dashboard" data-day="{{if .ShowTomorrow}}tomorrow{{else}}today{{end}}">
 {{template "swissnav" .}}
 
-    <!-- Main Content Container -->
-    <main class="sw-shell">
-        <header class="sw-head">
-            <div>
-                <p class="sw-eyebrow">{{if .ShowTomorrow}}Tomorrow{{else}}Today{{end}}</p>
-                <h1 class="sw-title">Dashboard</h1>
+<main class="sw-shell">
+    <header class="sw-head">
+        <div>
+            <p class="sw-eyebrow">{{if .ShowTomorrow}}Tomorrow{{else}}Today{{end}}</p>
+            <h1 class="sw-title">Dashboard</h1>
+        </div>
+    </header>
+
+    {{/*
+      "Up next" — the one question this page is opened to answer. It used to
+      be answered only by hunting through a mini list, while the top of the
+      page went to a grid of four tiles that merely repeated links the
+      navigation already had (twice over on a phone, because the mobile and
+      desktop copies both rendered).
+
+      It is filled by the script at the bottom from the lesson rows' own
+      data-start/data-end values, so it needs no extra request and follows
+      the school's real times. With JavaScript off it stays hidden and the
+      full list below is still complete.
+    */}}
+    <section class="sw-upnext" id="sw-upnext" hidden aria-live="polite">
+        <div class="sw-upnext-period" id="sw-upnext-period"></div>
+        <p class="sw-upnext-label" id="sw-upnext-label"></p>
+        <p class="sw-upnext-subject" id="sw-upnext-subject"></p>
+        <div class="sw-upnext-meta">
+            <span class="sw-upnext-time" id="sw-upnext-time"></span>
+            <span id="sw-upnext-where"></span>
+        </div>
+    </section>
+
+    <div class="sw-dash">
+        <section>
+            <div class="sw-section-title"><span>Notifications</span></div>
+            <div class="space-y-4" id="notifications-list">
+                {{template "notificationCards" .Notifications}}
             </div>
-        </header>
-
-        <!-- Mobile-only actions and cards -->
-        <div class="block md:hidden">
-            <!-- Quick Actions - Mobile version -->
-            <div class="sw-actions">
-                <button onclick="location.href='/substitutions/'"
-                        class="btn-mobile" style="--btn-index: 0">
-                    <div class="btn-icon-mobile">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
-                    <span class="font-medium btn-text-mobile">Substitutions</span>
-                </button>
-                <button onclick="location.href='/grades'"
-                        class="btn-mobile" style="--btn-index: 1">
-                    <div class="btn-icon-mobile">
-                        <i class="fas fa-graduation-cap"></i>
-                    </div>
-                    <span class="font-medium btn-text-mobile">Grades</span>
-                </button>
-                <button onclick="location.href='/lunches/'"
-                        class="btn-mobile" style="--btn-index: 2">
-                    <div class="btn-icon-mobile">
-                        <i class="fas fa-utensils"></i>
-                    </div>
-                    <span class="font-medium btn-text-mobile">Lunches</span>
-                </button>
-                <button onclick="location.href='/timetable/'"
-                        class="btn-mobile" style="--btn-index: 3">
-                    <div class="btn-icon-mobile">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <span class="font-medium btn-text-mobile">Timetable</span>
+            <div class="mt-4 flex justify-center">
+                <button type="button" id="load-older-notifications" class="sw-btn">
+                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                    <span>Load older</span>
                 </button>
             </div>
+        </section>
 
-            <!-- Mobile-first swipable cards -->
-            <div class="mb-6">
-                <div class="mobile-info-cards">
-                    <!-- Timetable Card (Always first in swiping order) -->
-                    <div class="mobile-info-card">
-                        <div class="mobile-card-header">
-                            <h3>
-                                <div class="mobile-card-icon mobile-timetable-icon">
-                                    <i class="fas fa-clock"></i>
-                                </div>
-                                {{if .ShowTomorrow}}
-                                    Tomorrow's Classes
-                                {{else}}
-                                    Today's Classes
+        <div class="sw-dash-rail">
+            <section>
+                <div class="sw-section-title">
+                    <span>{{if .ShowTomorrow}}Tomorrow's classes{{else}}Today's classes{{end}}</span>
+                    <a href="/timetable/" class="sw-link">All</a>
+                </div>
+                {{if .Timetable}}
+                    <ul class="sw-lesson-list" id="sw-lessons">
+                        {{range .Timetable}}
+                            <li class="sw-lesson{{if not .HasSubject}} sw-lesson--cancelled{{end}}"
+                                {{if .StartTime}}data-start="{{.StartTime}}"{{end}}
+                                {{if .EndTime}}data-end="{{.EndTime}}"{{end}}
+                                data-subject="{{if .HasSubject}}{{.Subject}}{{else}}Cancelled{{end}}"
+                                data-room="{{.Classrooms}}">
+                                <span class="sw-lesson-period">
+                                    {{if .HasPeriod}}{{.Period}}{{else}}<i class="fas fa-xmark" aria-hidden="true"></i>{{end}}
+                                </span>
+                                <span class="sw-lesson-subject">
+                                    {{if .HasSubject}}{{.Subject}}{{else}}Cancelled{{end}}
+                                </span>
+                                {{if .Classrooms}}
+                                    <span class="sw-lesson-room">{{.Classrooms}}</span>
                                 {{end}}
-                            </h3>
-                            <a href="/timetable/" class="mobile-card-link">
-                                View All
-                            </a>
-                        </div>
-                        <div class="mobile-card-content">
-                            {{if .Timetable}}
-                                {{range .Timetable}}
-                                    <div class="mobile-timetable-item">
-                                        <div class="mobile-period-number">
-                                            {{.Period}}
-                                        </div>
-                                        <div class="mobile-class-info">
-                                            <div class="mobile-class-subject">
-                                                {{if .HasSubject}}{{.Subject}}{{else}}Cancelled{{end}}
-                                            </div>
-                                            <div class="mobile-class-details">
-                                                {{if .Teachers}}
-                                                    <div class="mobile-class-teacher">
-                                                        <i class="fas fa-user"></i>
-                                                        {{.Teachers}}
-                                                    </div>
-                                                {{end}}
-                                                {{if .Classrooms}}
-                                                    <div class="mobile-class-room">
-                                                        <i class="fas fa-door-open"></i>
-                                                        {{.Classrooms}}
-                                                    </div>
-                                                {{end}}
-                                            </div>
-                                        </div>
-                                    </div>
+                                {{/* TimeDisplay falls back to the literal "Cancelled"
+                                     when a lesson has no window, which would repeat
+                                     the subject cell verbatim. EndTime is set only
+                                     for a real range, so it is the honest guard. */}}
+                                {{if or .EndTime .Teachers}}
+                                    <span class="sw-lesson-meta">
+                                        {{if .EndTime}}<span class="sw-lesson-time">{{.TimeDisplay}}</span>{{end}}
+                                        {{if .Teachers}}<span>{{.Teachers}}</span>{{end}}
+                                    </span>
                                 {{end}}
-                            {{else}}
-                                <div class="mobile-empty-message">
-                                    <i class="fas fa-calendar-day d-block"></i>
-                                    <p>
-                                        {{if .ShowTomorrow}}
-                                            No classes tomorrow
-                                        {{else}}
-                                            No classes today
-                                        {{end}}
-                                    </p>
-                                </div>
-                            {{end}}
-                        </div>
+                            </li>
+                        {{end}}
+                    </ul>
+                {{else}}
+                    <div class="sw-empty sw-empty--inline">
+                        <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                        <p>{{if .ShowTomorrow}}No classes tomorrow.{{else}}No classes today.{{end}}</p>
                     </div>
+                {{end}}
+            </section>
 
-                    <!-- Lunch Card (Second in swiping order) -->
-                    <div class="mobile-info-card">
-                        <div class="mobile-card-header">
-                            <h3>
-                                <div class="mobile-card-icon mobile-lunch-icon">
-                                    <i class="fas fa-utensils"></i>
-                                </div>
-                                {{if .ShowTomorrow}}
-                                    Tomorrow's Lunch
-                                {{else}}
-                                    Today's Lunch
-                                {{end}}
-                            </h3>
-                            <a href="/lunches/" class="mobile-card-link">
-                                View All
-                            </a>
-                        </div>
-                        <div class="mobile-card-content">
-                            {{if .Meals}}
-                                {{range $meal := .Meals}}
-                                    {{range $menu := $meal.Menus}}
-                                        <div class="mobile-lunch-item {{if menuOrdered $meal $menu}}mobile-lunch-ordered{{end}}">
-                                            {{if $menu.Number}}
-                                                <div class="mobile-lunch-menu-tag">
-                                                    <i class="fas fa-utensils"></i>
-                                                    Menu {{$menu.Number}}
-                                                    {{if menuOrdered $meal $menu}}
-                                                        <i class="fas fa-check-circle ml-1"></i>
-                                                    {{end}}
-                                                </div>
-                                            {{end}}
-                                            <div class="mobile-lunch-text">
-                                                {{$menu.Name}}
-                                            </div>
-                                        </div>
+            <section>
+                <div class="sw-section-title">
+                    <span>{{if .ShowTomorrow}}Tomorrow's lunch{{else}}Today's lunch{{end}}</span>
+                    <a href="/lunches/" class="sw-link">All</a>
+                </div>
+                {{if .Meals}}
+                    <ul class="sw-dish-list">
+                        {{range $meal := .Meals}}
+                            {{range $menu := $meal.Menus}}
+                                {{$ordered := menuOrdered $meal $menu}}
+                                <li class="sw-dish{{if $ordered}} is-ordered{{end}}">
+                                    {{/* The menu letter is spelled out rather than
+                                         clipped to its first character: "I." and
+                                         "II." both start with an I, so a one-glyph
+                                         key made the two choices indistinguishable. */}}
+                                    {{if or $menu.Number $ordered}}
+                                        <p class="sw-dish-label">
+                                            {{if $menu.Number}}<span>Menu {{$menu.Number}}</span>{{end}}
+                                            {{if $ordered}}<span class="sw-dish-note">Ordered</span>{{end}}
+                                        </p>
                                     {{end}}
-                                {{end}}
-                            {{else}}
-                                <div class="mobile-empty-message">
-                                    <i class="fas fa-utensils d-block"></i>
-                                    <p>
-                                        {{if .ShowTomorrow}}
-                                            No meals available tomorrow
-                                        {{else}}
-                                            No meals available today
-                                        {{end}}
-                                    </p>
-                                </div>
-                            {{end}}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mobile-pagination">
-                    <div class="mobile-pagination-dot active" data-index="0"></div>
-                    <div class="mobile-pagination-dot" data-index="1"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Desktop-only: Original quick actions layout -->
-        <div class="sw-actions sw-actions--desktop hidden md:grid">
-            <button onclick="location.href='/substitutions/'"
-                    class="sw-action">
-                <div class="sw-action-icon">
-                    <i class="fas fa-exchange-alt "></i>
-                </div>
-                <span class="sw-action-label">Substitutions</span>
-            </button>
-            <button onclick="location.href='/grades'"
-                    class="sw-action">
-                <div class="sw-action-icon">
-                    <i class="fas fa-graduation-cap "></i>
-                </div>
-                <span class="sw-action-label">Grades</span>
-            </button>
-            <button onclick="location.href='/lunches/'"
-                    class="sw-action">
-                <div class="sw-action-icon">
-                    <i class="fas fa-utensils "></i>
-                </div>
-                <span class="sw-action-label">Lunches</span>
-            </button>
-            <button onclick="location.href='/timetable/'"
-                    class="sw-action">
-                <div class="sw-action-icon">
-                    <i class="fas fa-clock "></i>
-                </div>
-                <span class="sw-action-label">Timetable</span>
-            </button>
-        </div>
-
-        <!-- Three Column Layout - Desktop only -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Left Column - Lunch Menu -->
-            <div class="lg:col-span-3 hidden md:block">
-                <div class="sw-panel sticky top-20">
-                    <div class="sw-section-title">
-                        <span>{{if .ShowTomorrow}}Tomorrow's lunch{{else}}Today's lunch{{end}}</span>
-                        <a href="/lunches/" class="sw-link">All</a>
-                    </div>
-                    {{if .Meals}}
-                        <ul class="space-y-3">
-                            {{range $meal := .Meals}}
-                                {{range $menu := $meal.Menus}}
-                                    <li class="relative group">
-                                        <div class="sw-mini{{if menuOrdered $meal $menu}} is-selected{{end}}">
-                                            {{if $menu.Number}}
-                                                <div class="flex items-center space-x-2 mb-1">
-                                                    <span class="sw-badge">Menu {{$menu.Number}}</span>
-                                                    {{if menuOrdered $meal $menu}}
-                                                        <span class="sw-badge sw-badge--solid">Ordered</span>
-                                                    {{end}}
-                                                </div>
-                                            {{end}}
-                                            <p class="text-sm {{if menuOrdered $meal $menu}}
-                                                            text-white font-medium
-                                                         {{else}}
-                                                            text-gray-300
-                                                         {{end}}">
-                                                {{$menu.Name}}
-                                            </p>
-                                        </div>
-                                    </li>
-                                {{end}}
-                            {{end}}
-                        </ul>
-                    {{else}}
-                        <p class="text-gray-400 text-sm">
-                            {{if .ShowTomorrow}}
-                                No meals available tomorrow
-                            {{else}}
-                                No meals available today
-                            {{end}}
-                        </p>
-                    {{end}}
-                </div>
-            </div>
-
-            <!-- Middle Column - Notifications -->
-            <div class="lg:col-span-6">
-                <div class="sw-panel">
-                    <div class="sw-section-title"><span>Notifications</span></div>
-                    <div class="space-y-4" id="notifications-list">
-                        {{template "notificationCards" .Notifications}}
-                    </div>
-                    <div class="mt-4 flex justify-center">
-                        <button type="button" id="load-older-notifications" class="sw-btn">
-                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-                            <span>Load older</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column - Timetable -->
-            <div class="lg:col-span-3 hidden md:block">
-                <div class="sw-panel sticky top-20">
-                    <div class="sw-section-title">
-                        <span>{{if .ShowTomorrow}}Tomorrow's classes{{else}}Today's classes{{end}}</span>
-                        <a href="/timetable/" class="sw-link">All</a>
-                    </div>
-                    {{if .Timetable}}
-                        <ul class="space-y-2">
-                            {{range .Timetable}}
-                                <li class="sw-mini">
-                                    <div class="flex gap-2">
-                                        {{if .HasPeriod}}
-                                            <div class="mobile-period-number">{{.Period}}</div>
-                                        {{else}}
-                                            <div class="mobile-period-number"><i class="fas fa-xmark"></i></div>
-                                        {{end}}
-                                        <div class="flex-1 min-w-0">
-                                            <!-- First row: Subject and Classroom -->
-                                            <div class="flex items-center justify-between gap-2">
-                                                <p class="text-sm font-medium text-white truncate">
-                                                    {{if .HasSubject}}{{.Subject}}{{else}}Cancelled{{end}}
-                                                </p>
-                                                {{if .Classrooms}}
-                                                    <span class="mobile-class-room ml-auto">{{.Classrooms}}</span>
-                                                {{end}}
-                                            </div>
-                                            <!-- Second row: Teacher -->
-                                            {{if .Teachers}}
-                                                <div class="mt-0.5 text-xs text-gray-400 truncate">
-                                                    <i class="fas fa-chalkboard-user text-indigo-400 mr-1"></i>
-                                                    {{.Teachers}}
-                                                </div>
-                                            {{end}}
-                                        </div>
-                                    </div>
+                                    <p class="sw-dish-name">{{$menu.Name}}</p>
                                 </li>
                             {{end}}
-                        </ul>
-                    {{else}}
-                        <p class="text-gray-400 text-sm">
-                            {{if .ShowTomorrow}}
-                                No classes tomorrow
-                            {{else}}
-                                No classes today
-                            {{end}}
-                        </p>
-                    {{end}}
-                </div>
-            </div>
+                        {{end}}
+                    </ul>
+                {{else}}
+                    <div class="sw-empty sw-empty--inline">
+                        <i class="fas fa-utensils" aria-hidden="true"></i>
+                        <p>{{if .ShowTomorrow}}Nothing on the menu tomorrow.{{else}}Nothing on the menu today.{{end}}</p>
+                    </div>
+                {{end}}
+            </section>
         </div>
-    </main>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Fix for pagination dots not updating on swipe
-        const mobileInfoCards = document.querySelector('.mobile-info-cards');
-        const paginationDots = document.querySelectorAll('.mobile-pagination-dot');
+    </div>
+</main>
 
-        if (mobileInfoCards && paginationDots.length > 0) {
-            // Initial setup - make sure the first dot is active
-            paginationDots[0].classList.add('active');
-            paginationDots[1].classList.remove('active');
+<script>
+/*
+ * Marks the lesson that is running right now (or, outside lesson hours, the
+ * next one) and mirrors it into the "up next" block at the top of the page.
+ *
+ * Times come from each row's own data-start/data-end, which the server
+ * renders from the school's real timetable. The previous version carried a
+ * hardcoded 1..9 bell table in the template and matched on period number,
+ * so it silently pointed at the wrong lesson whenever a school's bells
+ * differed from those literals — and it did the work twice, once per copy
+ * of the markup.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    var list = document.getElementById('sw-lessons');
+    var box = document.getElementById('sw-upnext');
+    if (!box) return;
 
-            // Update dots on scroll
-            mobileInfoCards.addEventListener('scroll', function() {
-                const cardWidth = mobileInfoCards.querySelector('.mobile-info-card').offsetWidth + 12; // width + margin
-                const scrollPosition = mobileInfoCards.scrollLeft;
-
-                // Calculate which card is most visible
-                const activeIndex = Math.round(scrollPosition / cardWidth);
-
-                // Update the active dot
-                paginationDots.forEach((dot, index) => {
-                    if (index === activeIndex) {
-                        dot.classList.add('active');
-                    } else {
-                        dot.classList.remove('active');
-                    }
-                });
-            });
-
-            // Add tap behavior to dots
-            paginationDots.forEach((dot, index) => {
-                dot.addEventListener('click', function() {
-                    const cardWidth = mobileInfoCards.querySelector('.mobile-info-card').offsetWidth + 12;
-                    mobileInfoCards.scrollTo({
-                        left: index * cardWidth,
-                        behavior: 'smooth'
-                    });
-
-                    // Update active state immediately for better feedback
-                    paginationDots.forEach((d, i) => {
-                        d.classList.toggle('active', i === index);
-                    });
-                });
-            });
-
-            // Add touch event detection for better mobile experience
-            let startX = 0;
-            let currentX = 0;
-
-            mobileInfoCards.addEventListener('touchstart', function(e) {
-                startX = e.touches[0].clientX;
-            }, {passive: true});
-
-            mobileInfoCards.addEventListener('touchmove', function(e) {
-                if (!startX) return;
-                currentX = e.touches[0].clientX;
-            }, {passive: true});
-
-            mobileInfoCards.addEventListener('touchend', function() {
-                if (!startX || !currentX) return;
-
-                const cardWidth = mobileInfoCards.querySelector('.mobile-info-card').offsetWidth + 12;
-                const currentIndex = Math.round(mobileInfoCards.scrollLeft / cardWidth);
-                const difference = startX - currentX;
-
-                // Set threshold for swipe
-                if (Math.abs(difference) > 50) {
-                    // Calculate new index based on swipe direction
-                    let newIndex = difference > 0 ? currentIndex + 1 : currentIndex - 1;
-                    // Ensure index is within bounds
-                    newIndex = Math.max(0, Math.min(newIndex, paginationDots.length - 1));
-
-                    // Update active state
-                    paginationDots.forEach((dot, index) => {
-                        dot.classList.toggle('active', index === newIndex);
-                    });
-                }
-
-                // Reset values
-                startX = 0;
-                currentX = 0;
-            }, {passive: true});
-        }
-    });
-
-    // Add this function to handle text expansion for long notifications
-    function toggleText(id) {
-        const dots = document.getElementById(`dots-${id}`);
-        const moreText = document.getElementById(`more-${id}`);
-        const button = document.getElementById(`btn-${id}`);
-
-        if (moreText.classList.contains("hidden")) {
-            dots.style.display = "none";
-            moreText.classList.remove("hidden");
-            button.textContent = "Show less";
-        } else {
-            dots.style.display = "inline";
-            moreText.classList.add("hidden");
-            button.textContent = "Show more";
-        }
+    function minutes(hhmm) {
+        var m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+        return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
     }
 
-    // Function to highlight current or next class based on time
-    function highlightCurrentOrNextClass() {
-        // Get current time
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    function update() {
+        var rows = list ? Array.prototype.slice.call(list.querySelectorAll('.sw-lesson')) : [];
+        rows.forEach(function (r) { r.classList.remove('is-now'); });
 
-        // Define class periods with start and end times
-        const classPeriods = {
-            1: { start: { hour: 8, minute: 0 }, end: { hour: 8, minute: 45 } },
-            2: { start: { hour: 8, minute: 55 }, end: { hour: 9, minute: 40 } },
-            3: { start: { hour: 9, minute: 50 }, end: { hour: 10, minute: 35 } },
-            4: { start: { hour: 10, minute: 55 }, end: { hour: 11, minute: 40 } },
-            5: { start: { hour: 11, minute: 50 }, end: { hour: 12, minute: 35 } },
-            6: { start: { hour: 12, minute: 45 }, end: { hour: 13, minute: 30 } },
-            7: { start: { hour: 13, minute: 40 }, end: { hour: 14, minute: 25 } },
-            8: { start: { hour: 14, minute: 35 }, end: { hour: 15, minute: 20 } },
-            9: { start: { hour: 15, minute: 30 }, end: { hour: 16, minute: 15 } }
-        };
+        var showTomorrow = document.body.getAttribute('data-day') === 'tomorrow';
+        var now = new Date();
+        var mins = now.getHours() * 60 + now.getMinutes();
 
-        // First find if any class is currently ongoing
-        let currentPeriod = null;
-        let nextPeriod = null;
-        let earliestNextStart = Infinity;
-
-        Object.entries(classPeriods).forEach(([period, times]) => {
-            const startTimeInMinutes = times.start.hour * 60 + times.start.minute;
-            const endTimeInMinutes = times.end.hour * 60 + times.end.minute;
-
-            // Check if this period is happening now
-            if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes) {
-                currentPeriod = period;
+        var current = null, next = null;
+        rows.forEach(function (row) {
+            var start = minutes(row.getAttribute('data-start'));
+            var end = minutes(row.getAttribute('data-end'));
+            if (start === null) return;
+            /* When the page is already showing tomorrow, every lesson is
+               ahead — comparing them against today's clock would mark them
+               all as past and leave the block empty. */
+            if (showTomorrow) {
+                if (!next) next = row;
+                return;
             }
-
-            // Find the next upcoming period
-            if (startTimeInMinutes > currentTimeInMinutes && startTimeInMinutes < earliestNextStart) {
-                earliestNextStart = startTimeInMinutes;
-                nextPeriod = period;
-            }
+            if (end !== null && mins >= start && mins < end) current = row;
+            else if (mins < start && !next) next = row;
         });
 
-        // Remove any existing highlights
-        document.querySelectorAll('.highlighted-class').forEach(el => {
-            el.classList.remove('highlighted-class');
-        });
-
-        // Determine which period to highlight (current or next)
-        const periodToHighlight = currentPeriod || nextPeriod;
-
-        if (periodToHighlight) {
-            // Highlight in desktop view
-            const desktopItems = document.querySelectorAll('.lg\\:col-span-3 .card.rounded-lg');
-            desktopItems.forEach(item => {
-                const periodElement = item.querySelector('.flex-shrink-0.w-6.h-6');
-                if (periodElement && periodElement.textContent.trim() === periodToHighlight) {
-                    item.classList.add('highlighted-class');
-                }
-            });
-
-            // Highlight in mobile view
-            const mobileItems = document.querySelectorAll('.mobile-timetable-item');
-            mobileItems.forEach(item => {
-                const periodElement = item.querySelector('.mobile-period-number');
-                if (periodElement && periodElement.textContent.trim() === periodToHighlight) {
-                    item.classList.add('highlighted-class');
-                }
-            });
+        var row = current || next;
+        if (!row) {
+            /* Nothing ahead: say so plainly rather than hiding the block, so
+               "no more lessons" is an answer and not an absence. */
+            box.hidden = rows.length === 0;
+            box.classList.add('sw-upnext--idle');
+            document.getElementById('sw-upnext-period').innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>';
+            document.getElementById('sw-upnext-label').textContent = 'Done for the day';
+            document.getElementById('sw-upnext-subject').textContent = 'No more lessons';
+            document.getElementById('sw-upnext-time').textContent = '';
+            document.getElementById('sw-upnext-where').textContent = '';
+            return;
         }
+
+        row.classList.add('is-now');
+        box.hidden = false;
+        box.classList.remove('sw-upnext--idle');
+
+        var period = row.querySelector('.sw-lesson-period');
+        var time = row.querySelector('.sw-lesson-time');
+        var room = row.getAttribute('data-room');
+
+        document.getElementById('sw-upnext-period').textContent = period ? period.textContent.trim() : '';
+        document.getElementById('sw-upnext-label').textContent =
+            current ? 'Happening now' : (showTomorrow ? 'First tomorrow' : 'Up next');
+        document.getElementById('sw-upnext-subject').textContent = row.getAttribute('data-subject') || '';
+        document.getElementById('sw-upnext-time').textContent = time ? time.textContent.trim() : '';
+        document.getElementById('sw-upnext-where').textContent = room || '';
     }
 
-    // .highlighted-class is styled in static/css/main.css.
-
-    // Run highlight function when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        highlightCurrentOrNextClass();
-
-        // Update the highlight every minute
-        setInterval(highlightCurrentOrNextClass, 60000);
-    });
+    update();
+    setInterval(update, 30000);
+});
 </script>
 <!-- Image Preview Modal -->
 <div id="imagePreviewModal" class="sw-modal hidden">
@@ -851,7 +559,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-{{template "swissthemejs"}}
-{{template "swisstabbar"}}
+{{template "swisschrome" .}}
 </body>
 </html>{{end}}

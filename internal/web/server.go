@@ -134,5 +134,5 @@ func (s *Server) Routes() http.Handler {
 		mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticSub)))
 	}
 
-	return mux
+	return withRequestTiming(mux)
 }

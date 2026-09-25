@@ -2,43 +2,42 @@
 <html lang="en">
 <head>
 {{template "swisshead" "Substitutions"}}
-<script src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js" defer></script>
 </head>
-<body class="mobile-safe-bottom has-tabbar" data-nav="substitutions" x-data="pageTransition()" x-init="init()">
+<body class="mobile-safe-bottom has-tabbar" data-nav="substitutions">
     <!-- Enhanced Navbar -->
 {{template "swissnav" .}}
 
     <!-- Main Content -->
-<main class="sw-shell sw-shell--narrow page-transition" :class="{ 'opacity-50': isLoading }">
-        <a href="/dashboard" class="back-button" style="margin-top:1.5rem">
-            <span class="icon"><i class="fas fa-chevron-left" aria-hidden="true"></i></span>
-            <span>Dashboard</span>
-        </a>
-
-        <header class="sw-head">
+<main class="sw-shell sw-shell--narrow">
+    <header class="sw-head">
             <div>
                 <p class="sw-eyebrow">Changes{{if .StudentClass}} — Class {{.StudentClass}}{{end}}</p>
                 <h1 class="sw-title">Substi&shy;tutions</h1>
                 <p class="sw-sub">{{dateLong .CurrentDate}}</p>
             </div>
             <div class="sw-btn-group">
-                <button type="button" class="sw-btn sw-btn--icon" aria-label="Previous day"
-                        @click="navigateTo('/substitutions/{{dateYMD .PrevDate}}')">
+                <a class="sw-btn sw-btn--icon" aria-label="Previous day" href="/substitutions/{{dateYMD .PrevDate}}">
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                </button>
-                <button type="button" class="sw-btn sw-btn--solid" @click="navigateTo('/substitutions/')">Today</button>
-                <button type="button" class="sw-btn sw-btn--icon" aria-label="Next day"
-                        @click="navigateTo('/substitutions/{{dateYMD .NextDate}}')">
+                </a>
+                <a class="sw-btn sw-btn--solid" href="/substitutions/">Today</a>
+                <a class="sw-btn sw-btn--icon" aria-label="Next day" href="/substitutions/{{dateYMD .NextDate}}">
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                </button>
+                </a>
             </div>
         </header>
+
+        {{if .MissingTeachers}}
+        <div class="sw-notice" style="margin-bottom:1rem">
+            <i class="fas fa-user-times" aria-hidden="true"></i>
+            <span>Missing teachers: {{range $i, $t := .MissingTeachers}}{{if $i}}, {{end}}{{$t.Name}}{{end}}</span>
+        </div>
+        {{end}}
 
         <div class="relative">
             <div class="day-container active">
                 <!-- Desktop view -->
                 <div class="desktop-table day-card">
-                <div class="overflow-x-auto desktop-table hidden sm:block">
+                <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
                             <tr>
@@ -100,7 +99,7 @@
                 </div>
 
                 <!-- Mobile view -->
-                <div class="mobile-cards sm:hidden block mt-4">
+                <div class="mobile-cards hidden mt-4">
                     {{if .Changes}}
                         <div class="mobile-timetable">
                             {{range .Changes}}
@@ -152,34 +151,6 @@
         </div>
 </main>
 
-    <!-- AlpineJS Script -->
-    <script>
-        function pageTransition() {
-            return {
-                isLoading: false,
-                init() {
-                    // Listen for link clicks
-                    this.addEventListeners();
-                },
-                addEventListeners() {
-                    document.addEventListener('click', (e) => {
-                        const link = e.target.closest('a');
-                        if (link && link.href && link.href.startsWith(window.location.origin) && !link.dataset.noTransition) {
-                            e.preventDefault();
-                            this.navigateTo(link.href);
-                        }
-                    });
-                },
-                navigateTo(url) {
-                    this.isLoading = true;
-                    setTimeout(() => {
-                        window.location.href = url;
-                    }, 200);
-                }
-            }
-        }
-    </script>
-{{template "swissthemejs"}}
-{{template "swisstabbar"}}
+{{template "swisschrome" .}}
 </body>
 </html>{{end}}

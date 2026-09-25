@@ -7,11 +7,6 @@
 {{template "swissnav" .}}
 
 <main class="sw-shell sw-shell--narrow">
-    <a href="/dashboard" class="back-button" style="margin-top:1.5rem">
-        <span class="icon"><i class="fas fa-chevron-left" aria-hidden="true"></i></span>
-        <span>Dashboard</span>
-    </a>
-
     <header class="sw-head">
         <div>
             <p class="sw-eyebrow">{{.TermLabel}}</p>
@@ -91,7 +86,6 @@
     {{end}}
 </main>
 
-{{template "swissthemejs"}}
-{{template "swisstabbar"}}
+{{template "swisschrome" .}}
 </body>
 </html>{{end}}

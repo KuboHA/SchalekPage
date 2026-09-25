@@ -314,6 +314,40 @@ func TestCheckMealWriteError(t *testing.T) {
 	})
 }
 
+func TestCheckRatingError(t *testing.T) {
+	t.Run("empty error field is success", func(t *testing.T) {
+		if err := checkRatingError([]byte(`{"error":""}`)); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("missing error field fails", func(t *testing.T) {
+		if err := checkRatingError([]byte(`{"status":"ok"}`)); err == nil {
+			t.Error("expected an error")
+		}
+	})
+
+	t.Run("non-empty error field fails", func(t *testing.T) {
+		if err := checkRatingError([]byte(`{"error":"nope"}`)); err == nil {
+			t.Error("expected an error")
+		}
+	})
+
+	t.Run("non-JSON body fails", func(t *testing.T) {
+		if err := checkRatingError([]byte("OK")); err == nil {
+			t.Error("expected an error")
+		}
+	})
+}
+
+func TestRateMeal_NoBoarderID(t *testing.T) {
+	c := New(0)
+	err := c.RateMeal(&Meal{}, 3, 4)
+	if err == nil || !errors.Is(err, ErrMissingData) {
+		t.Errorf("expected ErrMissingData, got %v", err)
+	}
+}
+
 func TestCanStillChangeMeal(t *testing.T) {
 	day := time.Now()
 

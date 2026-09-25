@@ -2,102 +2,26 @@
 <html lang="en">
 <head>
 {{template "swisshead" "Timetable"}}
-<script src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js" defer></script>
-
 <script>
-    document.addEventListener('alpine:init', () => {
-        // Register the pageTransition function globally for Alpine
-        Alpine.data('pageTransition', () => ({
-            isLoading: false,  // Start with false to prevent flash
-
-            navigateTo(url) {
-                this.isLoading = true;
-                window.location.href = url;
-            },
-
-            init() {
-                // Force loading state to false after initialization
-                this.isLoading = false;
-                console.log('Alpine initialized, loading state set to false');
-
-                // Apply row indices for animation
-                document.querySelectorAll('.timetable-row').forEach((row, index) => {
-                    row.style.setProperty('--row-index', index);
-                });
-
-                // Hide loading element manually as a failsafe
-                document.getElementById('loading-spinner').classList.add('hidden-loader');
-
-                // Handle page show events (like back button)
-                window.addEventListener('pageshow', () => {
-                    this.isLoading = false;
-                    document.getElementById('loading-spinner').classList.add('hidden-loader');
-                    console.log('Pageshow event triggered');
-                });
-            }
-        }));
+/*
+ * Stagger the timetable rows' entrance animation. This used to be done by
+ * Alpine's init hook; Alpine is no longer loaded (it existed only for a
+ * loading spinner and a transition that the service worker now makes
+ * unnecessary), so the one piece of it with a visible effect is kept here.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.timetable-row').forEach(function (row, index) {
+        row.style.setProperty('--row-index', index);
     });
-
-    // Additional fallback that doesn't depend on Alpine
-    window.addEventListener('load', function() {
-        console.log('Window loaded');
-        // Find loading elements and manually hide them
-        document.getElementById('loading-spinner').classList.add('hidden-loader');
-
-        const loaders = document.querySelectorAll('[x-show="isLoading"]');
-        loaders.forEach(loader => {
-            console.log('Manually hiding loader element');
-            loader.classList.add('hidden-loader');
-        });
-    });
-
-    // Extra failsafe for older browsers
-    setTimeout(() => {
-        if (document.getElementById('loading-spinner')) {
-            document.getElementById('loading-spinner').classList.add('hidden-loader');
-        }
-
-        const loaders = document.querySelectorAll('[x-show="isLoading"]');
-        loaders.forEach(loader => {
-            loader.classList.add('hidden-loader');
-        });
-        console.log('Emergency timeout triggered to hide loaders');
-    }, 1000);
+});
 </script>
 </head>
-<body class="mobile-safe-bottom has-tabbar" data-nav="timetable" x-data="pageTransition()" x-init="init()">
-    <!-- Replace the loader div with improved version -->
-    <div
-        id="loading-spinner"
-        x-show="isLoading"
-        x-cloak
-        class="sw-loader"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0">
-        <div class="text-center">
-            <div class="inline-block loader">
-                <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
-            <p class="sw-eyebrow" style="margin-top:1rem">Loading timetable</p>
-        </div>
-    </div>
+<body class="mobile-safe-bottom has-tabbar" data-nav="timetable" data-date="{{dateYMD .CurrentDate}}">
 
 {{template "swissnav" .}}
 
-<main class="sw-shell sw-shell--narrow page-transition" :class="{ 'opacity-50': isLoading }">
-        <a href="/dashboard" class="back-button" style="margin-top:1.5rem">
-            <span class="icon"><i class="fas fa-chevron-left" aria-hidden="true"></i></span>
-            <span>Dashboard</span>
-        </a>
-
-        <header class="sw-head">
+<main class="sw-shell sw-shell--narrow">
+    <header class="sw-head">
             <div>
                 <p class="sw-eyebrow">Schedule</p>
                 <h1 class="sw-title">Timetable</h1>
@@ -113,15 +37,13 @@
                 {{end}}
             </div>
             <div class="sw-btn-group">
-                <button type="button" class="sw-btn sw-btn--icon" aria-label="Previous day"
-                        @click="navigateTo('/timetable/{{dateYMD .PrevDate}}')">
+                <a class="sw-btn sw-btn--icon" aria-label="Previous day" href="/timetable/{{dateYMD .PrevDate}}">
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                </button>
-                <button type="button" class="sw-btn sw-btn--solid" @click="navigateTo('/timetable/')">Today</button>
-                <button type="button" class="sw-btn sw-btn--icon" aria-label="Next day"
-                        @click="navigateTo('/timetable/{{dateYMD .NextDate}}')">
+                </a>
+                <a class="sw-btn sw-btn--solid" href="/timetable/">Today</a>
+                <a class="sw-btn sw-btn--icon" aria-label="Next day" href="/timetable/{{dateYMD .NextDate}}">
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                </button>
+                </a>
             </div>
         </header>
 
@@ -142,7 +64,9 @@
                             <tbody>
                                 {{if .Timetable}}
                                 {{range $i, $period := .Timetable}}
-                                    <tr class="timetable-row{{if $period.IsCancelled}} is-cancelled{{end}}{{if $period.IsEvent}} is-event{{end}}" style="--row-index: {{$i}}">
+                                    <tr class="timetable-row{{if $period.IsCancelled}} is-cancelled{{end}}{{if $period.IsEvent}} is-event{{end}}" style="--row-index: {{$i}}"
+                                        {{if $period.StartTime}}data-start="{{$period.StartTime}}"{{end}}
+                                        {{if $period.EndTime}}data-end="{{$period.EndTime}}"{{end}}>
                                         <td>
                                             <span class="sw-period">
                                                 {{$period.Period}}
@@ -150,7 +74,7 @@
                                         </td>
                                         <td class="text-gray-300">
                                             <div class="text-sm">
-                                                <i class="far fa-clock text-indigo-400 mr-2"></i>
+                                                <i class="fas fa-clock text-indigo-400 mr-2"></i>
                                                 {{if eq $period.TimeDisplay "Cancelled"}}
                                                     <span class="sw-cancelled">Cancelled</span>
                                                 {{else}}
@@ -209,7 +133,9 @@
                         {{if .Timetable}}
                             <div class="mobile-timetable">
                                 {{range $i, $period := .Timetable}}
-                                    <div class="mobile-period-card{{if $period.IsCancelled}} is-cancelled{{end}}{{if $period.IsEvent}} is-event{{end}}" style="--row-index: {{$i}}">
+                                    <div class="mobile-period-card{{if $period.IsCancelled}} is-cancelled{{end}}{{if $period.IsEvent}} is-event{{end}}" style="--row-index: {{$i}}"
+                                         {{if $period.StartTime}}data-start="{{$period.StartTime}}"{{end}}
+                                         {{if $period.EndTime}}data-end="{{$period.EndTime}}"{{end}}>
                                         <div class="mobile-period-header">
                                             <div class="mobile-period-title-row">
                                                 <div class="mobile-period-number">{{$period.Period}}</div>
@@ -229,9 +155,9 @@
                                             </div>
                                             {{end}}
 
-                                            {{if $period.StartTime}}
+                                            {{if $period.EndTime}}
                                                 <div class="mobile-period-time">
-                                                    {{$period.StartTime}}
+                                                    {{$period.TimeDisplay}}
                                                 </div>
                                             {{end}}
                                         </div>
@@ -267,64 +193,38 @@
         </div>
 </main>
 
-    <script>
-        function pageTransition() {
-            return {
-                isLoading: false,
+<script>
+/*
+ * Marks the lesson happening right now, in both the table and the phone
+ * cards. Guarded on the date in <body data-date>: this page also shows
+ * other days, and highlighting "now" on next Tuesday would be a lie.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    var shown = document.body.getAttribute('data-date');
+    var now = new Date();
+    var today = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
+    if (shown !== today) return;
 
-                navigateTo(url) {
-                    this.isLoading = true;
+    function minutes(hhmm) {
+        var m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+        return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+    }
 
-                    window.location.href = url;
-                },
-
-                init() {
-                    // Make sure loading state turns off immediately
-                    this.isLoading = false;
-
-                    // Manually hide the loader
-                    const loader = document.getElementById('loading-spinner');
-                    if (loader) {
-                        loader.classList.add('hidden-loader');
-                    }
-
-                    document.querySelectorAll('.timetable-row').forEach((row, index) => {
-                        row.style.setProperty('--row-index', index);
-                    });
-
-                    // Handle browser back button behavior
-                    window.addEventListener('pageshow', (event) => {
-                        console.log("pageshow event triggered");
-                        this.isLoading = false;
-
-                        // Manually hide the loader again
-                        const loader = document.getElementById('loading-spinner');
-                        if (loader) {
-                            loader.classList.add('hidden-loader');
-                        }
-                    });
-                }
-            };
-        }
-
-        // Add a global fallback to ensure the spinner is hidden if Alpine fails
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM fully loaded");
-            const loader = document.getElementById('loading-spinner');
-            if (loader) {
-                loader.classList.add('hidden-loader');
-            }
+    function mark() {
+        var mins = new Date().getHours() * 60 + new Date().getMinutes();
+        document.querySelectorAll('[data-start][data-end]').forEach(function (el) {
+            var start = minutes(el.getAttribute('data-start'));
+            var end = minutes(el.getAttribute('data-end'));
+            el.classList.toggle('is-now', start !== null && end !== null && mins >= start && mins < end);
         });
+    }
 
-        // One more emergency backup
-        window.addEventListener('load', function() {
-            const loader = document.getElementById('loading-spinner');
-            if (loader) {
-                loader.classList.add('hidden-loader');
-            }
-        });
-    </script>
-{{template "swissthemejs"}}
-{{template "swisstabbar"}}
+    mark();
+    setInterval(mark, 30000);
+});
+</script>
+{{template "swisschrome" .}}
 </body>
 </html>{{end}}

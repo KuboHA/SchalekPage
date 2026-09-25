@@ -1,10 +1,24 @@
 {{- /*
   Shared chrome for every page. Kept in one file so the theme switcher, the
-  font/stylesheet links and the navbar can't drift apart across templates.
+  font/stylesheet links and the navigation can't drift apart across
+  templates.
 
-  "swisshead" takes the page title as its data (a plain string), everything
-  else either takes the page's view model (it only reads .Student) or no data
-  at all.
+  Navigation rule: exactly one navigation is visible at any width.
+    * >= 900px  "swissnav" carries the full link row; "swisstabbar" is hidden.
+    * <  900px  "swissnav" keeps only identity + theme; "swisstabbar" routes,
+                and its "More" tab is a disclosure holding the overflow
+                destinations and the account actions.
+  No page may render its own list of destinations on top of these — the
+  dashboard used to, which is how a phone came to show three navigations
+  stacked on one screen.
+
+  "swisshead" takes the page title as its data (a plain string). "swissnav",
+  "swisstabbar" and "swisschrome" take the page's view model (they read
+  .Student only); the rest take no data. Every page sets <body data-nav="..."> to the key
+  below, which is what marks the current destination.
+
+      dashboard  timetable  lunches  grades
+      substitutions  homework  exams  messages
 */ -}}
 
 {{define "swisshead"}}
@@ -33,10 +47,7 @@
     <link rel="icon" href="/static/favicon.ico" sizes="any">
     <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="/static/icons/icon-180.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/main.css">
 {{end}}
@@ -53,25 +64,29 @@
 {{end}}
 
 {{define "swissnav"}}
-<nav class="sw-nav">
+<nav class="sw-nav" aria-label="Primary">
     <div class="sw-nav-inner">
         <a href="/dashboard" class="sw-brand">Schalek<span>Page</span></a>
-        {{/* The tab bar below is phone-only (display:none above 768px), so
-             without these the new pages are unreachable by clicking on a
-             desktop browser. */}}
+
+        {{/* Wide screens only (see .sw-nav-links in main.css). The bottom tab
+             bar takes over below 900px, so these two never show at once. */}}
         <div class="sw-nav-links">
-            <a href="/timetable/">Timetable</a>
-            <a href="/lunches/">Lunches</a>
-            <a href="/grades">Grades</a>
-            <a href="/substitutions/">Subs</a>
-            <a href="/homework">Homework</a>
-            <a href="/exams">Exams</a>
-            <a href="/messages">Messages</a>
+            <a href="/dashboard" data-nav-link="dashboard">Home</a>
+            <a href="/timetable/" data-nav-link="timetable">Timetable</a>
+            <a href="/lunches/" data-nav-link="lunches">Lunches</a>
+            <a href="/grades" data-nav-link="grades">Grades</a>
+            <a href="/substitutions/" data-nav-link="substitutions">Changes</a>
+            <a href="/homework" data-nav-link="homework">Homework</a>
+            <a href="/exams" data-nav-link="exams">Exams</a>
+            <a href="/messages" data-nav-link="messages">Messages</a>
         </div>
+
         <div class="sw-nav-right">
             {{if .Student}}<span class="sw-user">{{.Student.Name}}</span>{{end}}
             {{template "swisstheme"}}
-            <form method="post" action="/logout">
+            {{/* Phone keeps sign-out in the "More" sheet instead, so the top
+                 bar there is identity + theme and nothing more. */}}
+            <form method="post" action="/logout" class="sw-nav-signout">
                 <button type="submit" class="sw-btn sw-btn--icon" aria-label="Sign out" title="Sign out">
                     <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
                 </button>
@@ -81,31 +96,17 @@
 </nav>
 {{end}}
 
-{{define "swissthemejs"}}
-<script>
-    (function () {
-        var root = document.documentElement;
-        document.addEventListener("click", function (e) {
-            var btn = e.target.closest("[data-set-theme]");
-            if (!btn) return;
-            var theme = btn.getAttribute("data-set-theme");
-            root.setAttribute("data-theme", theme);
-            try { localStorage.setItem("sp-theme", theme); } catch (err) { /* private mode */ }
-        });
-    })();
-
-    if ("serviceWorker" in navigator) {
-        window.addEventListener("load", function () {
-            navigator.serviceWorker.register("/sw.js").catch(function () { /* offline support is best-effort */ });
-        });
-    }
-</script>
-{{end}}
-
 {{/*
-  Fixed bottom tab bar shown on phones only (see .sw-tabbar in main.css).
-  "active" reads a data attribute on <body data-nav="..."> set per page, so
-  the current tab can be highlighted without JS.
+  Bottom tab bar — the phone's only navigation (hidden at >= 900px, see
+  .sw-tabbar in main.css). Four destinations hold a permanent slot; "More"
+  is a <details> disclosure holding the other four plus the account actions.
+
+  It is <details> rather than a button the script wires up because these are
+  four whole sections of the app: with a scripted toggle they would be
+  unreachable on a phone whenever the script failed to run. The disclosure
+  opens and closes on its own; the script in "swisschrome" only adds the
+  extras — close on the scrim, close on Escape — that <details> has no
+  native equivalent for.
 */}}
 {{define "swisstabbar"}}
 <nav class="sw-tabbar" aria-label="Primary">
@@ -125,29 +126,189 @@
         <i class="fas fa-graduation-cap" aria-hidden="true"></i>
         <span>Grades</span>
     </a>
-    <a href="/substitutions/" class="sw-tab" data-tab="substitutions">
-        <i class="fas fa-exchange-alt" aria-hidden="true"></i>
-        <span>Subs</span>
-    </a>
-    <a href="/homework" class="sw-tab" data-tab="homework">
-        <i class="fas fa-book" aria-hidden="true"></i>
-        <span>Homework</span>
-    </a>
-    <a href="/exams" class="sw-tab" data-tab="exams">
-        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-        <span>Exams</span>
-    </a>
-    <a href="/messages" class="sw-tab" data-tab="messages">
-        <i class="fas fa-envelope" aria-hidden="true"></i>
-        <span>Messages</span>
-    </a>
+    <details class="sw-more" id="sw-more">
+        <summary class="sw-tab" id="sw-more-tab">
+            <i class="fas fa-ellipsis" aria-hidden="true"></i>
+            <span>More</span>
+        </summary>
+
+        <div class="sw-sheet">
+            <div class="sw-sheet-scrim" data-sheet-close></div>
+            <div class="sw-sheet-panel">
+                {{template "swisssheetbody" .}}
+            </div>
+        </div>
+    </details>
 </nav>
+{{end}}
+
+{{define "swisssheetbody"}}
+        <div class="sw-sheet-head">
+            <span class="sw-eyebrow" style="margin:0">More</span>
+            <button type="button" class="sw-link" data-sheet-close>Close</button>
+        </div>
+
+        <div class="sw-sheet-links">
+            <a href="/substitutions/" class="sw-sheet-link" data-tab="substitutions">
+                <i class="fas fa-exchange-alt" aria-hidden="true"></i> Changes
+            </a>
+            <a href="/homework" class="sw-sheet-link" data-tab="homework">
+                <i class="fas fa-book" aria-hidden="true"></i> Homework
+            </a>
+            <a href="/exams" class="sw-sheet-link" data-tab="exams">
+                <i class="fas fa-clipboard-list" aria-hidden="true"></i> Exams
+            </a>
+            <a href="/messages" class="sw-sheet-link" data-tab="messages">
+                <i class="fas fa-envelope" aria-hidden="true"></i> Messages
+            </a>
+        </div>
+
+        <div class="sw-sheet-foot">
+            {{if .Student}}
+                <span class="sw-user" style="max-width:none">{{.Student.Name}}</span>
+            {{else}}
+                <span></span>
+            {{end}}
+            <form method="post" action="/logout">
+                <button type="submit" class="sw-btn">
+                    <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                    <span>Sign out</span>
+                </button>
+            </form>
+        </div>
+{{end}}
+
+{{/*
+  One script for all shared chrome: theme switching, marking the current
+  destination in every navigation at once, the "More" sheet, and the service
+  worker. Pages include it as {{template "swisschrome" .}} just before
+  </body>.
+*/}}
+{{define "swisschrome"}}
+{{template "swisstabbar" .}}
 <script>
     (function () {
+        var root = document.documentElement;
+
+        /* Theme */
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-set-theme]");
+            if (!btn) return;
+            var theme = btn.getAttribute("data-set-theme");
+            root.setAttribute("data-theme", theme);
+            try { localStorage.setItem("sp-theme", theme); } catch (err) { /* private mode */ }
+        });
+
+        /* Current destination. One source of truth — <body data-nav> — marks
+           the top link, the tab and the sheet entry together, so they can
+           never disagree about where you are. */
         var current = document.body.getAttribute("data-nav");
-        if (!current) return;
-        var tab = document.querySelector('.sw-tab[data-tab="' + current + '"]');
-        if (tab) tab.setAttribute("aria-current", "page");
+        if (current) {
+            var sel = '[data-nav-link="' + current + '"], .sw-tab[data-tab="' + current + '"], .sw-sheet-link[data-tab="' + current + '"]';
+            document.querySelectorAll(sel).forEach(function (el) {
+                el.setAttribute("aria-current", "page");
+            });
+            /* A destination that lives behind "More" still lights the tab that
+               opens it, so the bar always shows where you are. */
+            if (document.querySelector('.sw-sheet-link[data-tab="' + current + '"]')) {
+                var moreTab = document.getElementById("sw-more-tab");
+                if (moreTab) moreTab.classList.add("is-active");
+            }
+        }
+
+        /* "More" sheet. The <details> opens and closes by itself; these
+           handlers only add what it has no native equivalent for. */
+        var more = document.getElementById("sw-more");
+        if (more) {
+            var close = function () {
+                more.open = false;
+                var summary = more.querySelector("summary");
+                if (summary) summary.focus();
+            };
+            more.addEventListener("click", function (e) {
+                if (e.target.closest("[data-sheet-close]")) {
+                    e.preventDefault();
+                    close();
+                }
+            });
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape" && more.open) close();
+            });
+            /* Locking the page behind the sheet keeps a scroll gesture from
+               moving the content the sheet is covering. */
+            more.addEventListener("toggle", function () {
+                document.body.classList.toggle("sw-sheet-open", more.open);
+            });
+        }
+    })();
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+            navigator.serviceWorker.register("/sw.js").catch(function () { /* offline support is best-effort */ });
+        });
+    }
+
+    /* On-device navigation warm-up. Once a service worker controls the page,
+       ask it to fetch the primary destinations so the next click is served
+       from the device instead of crossing the network. Without a controller
+       (the very first visit) this does nothing. */
+    (function () {
+        if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+
+        var pages = ["/dashboard", "/timetable/", "/lunches/", "/grades",
+                     "/substitutions/", "/homework", "/exams", "/messages"]
+            .filter(function (url) { return url !== window.location.pathname; });
+        var seen = Object.create(null);
+
+        function prefetch(url) {
+            if (seen[url]) return;
+            seen[url] = true;
+            fetch(url, {
+                credentials: "same-origin",
+                headers: { "X-SP-Prefetch": "1" }
+            }).catch(function () { /* best-effort */ });
+        }
+
+        /* Warm the destinations one at a time rather than in a burst, so the
+           idle prefetch never competes with the page the student is on. The
+           service worker skips destinations it already has fresh. */
+        var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 800); };
+        idle(function () {
+            var i = 0;
+            (function next() {
+                if (i >= pages.length) return;
+                prefetch(pages[i++]);
+                setTimeout(next, 250);
+            })();
+        });
+
+        /* A click follows the pointer by a few hundred milliseconds on desktop;
+           on touch, touchstart fires while the finger is still down. Either is
+           enough of a head start to fetch and cache the destination. */
+        function onIntent(e) {
+            var link = e.target.closest && e.target.closest('a[href^="/"]');
+            if (link) prefetch(link.getAttribute("href"));
+        }
+        document.addEventListener("pointerenter", onIntent, true);
+        document.addEventListener("touchstart", onIntent, { capture: true, passive: true });
+    })();
+</script>
+{{end}}
+
+{{/* Kept as a thin alias: pages written before "swisschrome" existed still
+     call it, and the login/two-factor pages want the theme switch without a
+     tab bar or sheet. */}}
+{{define "swissthemejs"}}
+<script>
+    (function () {
+        var root = document.documentElement;
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-set-theme]");
+            if (!btn) return;
+            var theme = btn.getAttribute("data-set-theme");
+            root.setAttribute("data-theme", theme);
+            try { localStorage.setItem("sp-theme", theme); } catch (err) { /* private mode */ }
+        });
     })();
 </script>
 {{end}}

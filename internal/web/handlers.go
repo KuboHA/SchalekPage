@@ -314,12 +314,13 @@ func (s *Server) handleGrades(w http.ResponseWriter, r *http.Request, sess *Sess
 
 // substitutionsPageData is the view model for substitutions.html.
 type substitutionsPageData struct {
-	Student      *studentSummary
-	StudentClass string
-	Changes      []substitutionView
-	CurrentDate  time.Time
-	PrevDate     time.Time
-	NextDate     time.Time
+	Student         *studentSummary
+	StudentClass    string
+	Changes         []substitutionView
+	MissingTeachers []edupage.Teacher
+	CurrentDate     time.Time
+	PrevDate        time.Time
+	NextDate        time.Time
 }
 
 // handleSubstitutions serves GET /substitutions/ and /substitutions/{date}.
@@ -350,17 +351,21 @@ func (s *Server) handleSubstitutions(w http.ResponseWriter, r *http.Request, ses
 		}
 	}
 
-	changes, err := sess.Client.TimetableChanges(current)
+	// One fetch feeds both views: TimetableChanges and MissingTeachers each
+	// request the same viewer HTML, so calling them separately was paying for
+	// the identical EduPage round trip twice, serially.
+	changes, missingTeachers, err := sess.Client.SubstitutionDay(current)
 	if err != nil {
-		s.logger.Warn("substitutions: fetch changes failed", "error", err)
+		s.logger.Warn("substitutions: fetch failed", "error", err)
 	}
 
 	s.render(w, r, "substitutions.html", substitutionsPageData{
-		Student:      studentSummaryOrNil(student.Name, studentOK),
-		StudentClass: className,
-		Changes:      buildSubstitutionViews(changes, className),
-		CurrentDate:  current,
-		PrevDate:     current.AddDate(0, 0, -1),
-		NextDate:     current.AddDate(0, 0, 1),
+		Student:         studentSummaryOrNil(student.Name, studentOK),
+		StudentClass:    className,
+		Changes:         buildSubstitutionViews(changes, className),
+		MissingTeachers: missingTeachers,
+		CurrentDate:     current,
+		PrevDate:        current.AddDate(0, 0, -1),
+		NextDate:        current.AddDate(0, 0, 1),
 	})
 }

@@ -28,11 +28,16 @@ func TestRenderPreview(t *testing.T) {
 	day := time.Date(2026, 3, 17, 9, 0, 0, 0, time.UTC)
 	stu := &studentSummary{Name: "Jan Marek Schalek"}
 
+	// Mirrors what buildPeriodView actually emits: StartTime/EndTime are set
+	// together, and a lesson with no window carries neither (its TimeDisplay
+	// is the literal "Cancelled"). Filling only StartTime here used to make
+	// the preview disagree with every real render.
 	periods := []periodView{
-		{Period: "1", HasPeriod: true, TimeDisplay: "08:00 - 08:45", StartTime: "08:00", Subject: "Mathematics", HasSubject: true, Classrooms: "B214", Teachers: "A. Nováková"},
-		{Period: "2", HasPeriod: true, TimeDisplay: "08:55 - 09:40", StartTime: "08:55", Subject: "Physics", HasSubject: true, Classrooms: "A102", Teachers: "P. Horváth"},
-		{Period: "3", HasPeriod: true, TimeDisplay: "Cancelled", StartTime: "09:50", Subject: "", HasSubject: false, Classrooms: "", Teachers: ""},
-		{Period: "4", HasPeriod: true, TimeDisplay: "10:55 - 11:40", StartTime: "10:55", Subject: "Slovak Language and Literature", HasSubject: true, Classrooms: "C7", Teachers: "M. Kováčová"},
+		{Period: "1", HasPeriod: true, TimeDisplay: "08:00 - 08:45", StartTime: "08:00", EndTime: "08:45", Subject: "Mathematics", HasSubject: true, Classrooms: "B214", Teachers: "A. Nováková"},
+		{Period: "2", HasPeriod: true, TimeDisplay: "08:55 - 09:40", StartTime: "08:55", EndTime: "09:40", Subject: "Physics", HasSubject: true, Classrooms: "A102", Teachers: "P. Horváth"},
+		{Period: "3", HasPeriod: true, TimeDisplay: "Cancelled", Subject: "", HasSubject: false, Classrooms: "", Teachers: "", IsCancelled: true},
+		{Period: "4", HasPeriod: true, TimeDisplay: "10:55 - 11:40", StartTime: "10:55", EndTime: "11:40", Subject: "Slovak Language and Literature", HasSubject: true, Classrooms: "C7", Teachers: "M. Kováčová"},
+		{Period: "5", HasPeriod: true, TimeDisplay: "11:50 - 12:35", StartTime: "11:50", EndTime: "12:35", Subject: "Biology", HasSubject: true, Classrooms: "A210", Teachers: "J. Sedláková"},
 	}
 
 	meals := []mealView{{
@@ -70,19 +75,22 @@ func TestRenderPreview(t *testing.T) {
 		"lunches.html": {"lunches.html", lunchesPageData{Student: stu, Meals: meals, CurrentDate: day,
 			PrevDate: day.AddDate(0, 0, -1), NextDate: day.AddDate(0, 0, 1),
 			DateRange: []time.Time{day.AddDate(0, 0, -2), day.AddDate(0, 0, -1), day, day.AddDate(0, 0, 1), day.AddDate(0, 0, 2), day.AddDate(0, 0, 3), day.AddDate(0, 0, 4)}}},
-		"grades.html": {"grades.html", gradesPageDataFull{Student: stu, gradesPageView: gradesPageView{
-			HasOverall: true, Overall: 1.8, OverallInt: 2, OverallCls: averageBadgeClass(1.8),
-			Subjects: []gradeSubjectView{
-				{Subject: "Mathematics", HasAverage: true, Average: 1.6, AvgClass: averageBadgeClass(1.6), Grades: []gradeView{
-					{GradeDisplay: "1", ColorClass: gradeColorClass(1), Title: "Quadratic equations", Teacher: "A. Nováková", Date: day, Comment: "Excellent working."},
-					{GradeDisplay: "2", ColorClass: gradeColorClass(2), Title: "Term test", Teacher: "A. Nováková", Date: day.AddDate(0, 0, -20)},
-				}},
-				{Subject: "Physics", HasAverage: true, Average: 2.4, HasPercent: true, PercentAvg: 78, AvgClass: averageBadgeClass(2.4), Grades: []gradeView{
-					{GradeDisplay: "78%", ColorClass: percentColorClass(78), Title: "Optics lab", Teacher: "P. Horváth", Date: day, IsPercent: true, Percent: 78, MaxPoints: 50},
-					{GradeDisplay: "4", ColorClass: gradeColorClass(4), Title: "Mechanics quiz", Teacher: "P. Horváth", Date: day.AddDate(0, 0, -9)},
-					{GradeDisplay: "5", ColorClass: gradeColorClass(5), Title: "Homework check", Teacher: "P. Horváth", Date: day.AddDate(0, 0, -30)},
-				}},
-			}}}},
+		"grades.html": {"grades.html", gradesPageDataFull{Student: stu,
+			SelectedTerm: edupage.TermSecond, TermLabel: "2nd term", IsTermSecond: true,
+			SelectedYear: 2025, PrevYear: 2024, NextYear: 2026,
+			gradesPageView: gradesPageView{
+				HasOverall: true, Overall: 1.8, OverallInt: 2, OverallCls: averageBadgeClass(1.8),
+				Subjects: []gradeSubjectView{
+					{Subject: "Mathematics", HasAverage: true, Average: 1.6, AvgClass: averageBadgeClass(1.6), Grades: []gradeView{
+						{GradeDisplay: "1", ColorClass: gradeColorClass(1), Title: "Quadratic equations", Teacher: "A. Nováková", Date: day, Comment: "Excellent working."},
+						{GradeDisplay: "2", ColorClass: gradeColorClass(2), Title: "Term test", Teacher: "A. Nováková", Date: day.AddDate(0, 0, -20)},
+					}},
+					{Subject: "Physics", HasAverage: true, Average: 2.4, HasPercent: true, PercentAvg: 78, AvgClass: averageBadgeClass(2.4), Grades: []gradeView{
+						{GradeDisplay: "78%", ColorClass: percentColorClass(78), Title: "Optics lab", Teacher: "P. Horváth", Date: day, IsPercent: true, Percent: 78, MaxPoints: 50},
+						{GradeDisplay: "4", ColorClass: gradeColorClass(4), Title: "Mechanics quiz", Teacher: "P. Horváth", Date: day.AddDate(0, 0, -9)},
+						{GradeDisplay: "5", ColorClass: gradeColorClass(5), Title: "Homework check", Teacher: "P. Horváth", Date: day.AddDate(0, 0, -30)},
+					}},
+				}}}},
 		"substitutions.html": {"substitutions.html", substitutionsPageData{Student: stu, StudentClass: "4.B", CurrentDate: day,
 			PrevDate: day.AddDate(0, 0, -1), NextDate: day.AddDate(0, 0, 1),
 			Changes: []substitutionView{
@@ -91,7 +99,35 @@ func TestRenderPreview(t *testing.T) {
 				{LessonN: "7", Title: "Extra consultation, Mathematics", Action: "add"},
 			}}},
 		"substitutions-empty.html": {"substitutions.html", substitutionsPageData{Student: stu, StudentClass: "4.B", CurrentDate: day, PrevDate: day, NextDate: day}},
-		"grades-empty.html":        {"grades.html", gradesPageDataFull{Student: stu}},
+		"grades-empty.html": {"grades.html", gradesPageDataFull{Student: stu,
+			SelectedTerm: edupage.TermSecond, TermLabel: "2nd term", IsTermSecond: true,
+			SelectedYear: 2025, PrevYear: 2024, NextYear: 2026}},
+		"homework.html": {"homework.html", homeworkPageData{Student: stu, homeworkPageView: homeworkPageView{
+			OutstandingTotal: 3, DoneTotal: 1,
+			Groups: []homeworkGroupView{
+				{HasDueDate: true, DueDate: day, OutstandingN: 2, DoneN: 1, Items: []homeworkItemView{
+					{Title: "Exercises 14-21, quadratic equations", TypeName: "Homework", IconClass: "fa-book", AuthorName: "A. Nováková"},
+					{Title: "Read chapter 4 and summarise", TypeName: "Homework", IconClass: "fa-book", AuthorName: "M. Kováčová"},
+					{Title: "Optics lab write-up", TypeName: "Project", IconClass: "fa-flask", AuthorName: "P. Horváth", IsDone: true, HasDoneAt: true, DoneAt: day.AddDate(0, 0, -1)},
+				}},
+				{HasDueDate: true, DueDate: day.AddDate(0, 0, -4), IsPastDue: true, OutstandingN: 1, Items: []homeworkItemView{
+					{Title: "German vocabulary, unit 6", TypeName: "Homework", IconClass: "fa-book", AuthorName: "N. Gajdová"},
+				}},
+			}}}},
+		"homework-empty.html": {"homework.html", homeworkPageData{Student: stu}},
+		"exams.html": {"exams.html", examsPageData{Student: stu, examsPageView: examsPageView{
+			Upcoming: []examItemView{
+				{Title: "Quadratic equations", TypeName: "Big Exam", IconClass: "fa-file-alt", AuthorName: "A. Nováková", Date: day.AddDate(0, 0, 3)},
+				{Title: "Optics", TypeName: "Short Exam", IconClass: "fa-file-lines", AuthorName: "P. Horváth", Date: day.AddDate(0, 0, 8)},
+			},
+			Past: []examItemView{
+				{Title: "Mechanics", TypeName: "Oral Exam", IconClass: "fa-comments", AuthorName: "P. Horváth", Date: day.AddDate(0, 0, -12)},
+			}}}},
+		"exams-empty.html": {"exams.html", examsPageData{Student: stu}},
+		"messages.html": {"messages.html", newMessagesPageData(stu,
+			[]messageRecipientOption{{ID: "Student1", Name: "Eva Bartošová"}, {ID: "Student2", Name: "Tomáš Nagy"}},
+			[]messageRecipientOption{{ID: "Teacher1", Name: "A. Nováková"}, {ID: "Teacher2", Name: "P. Horváth"}},
+			nil, "", nil, "", false)},
 	}
 
 	for file, p := range pages {

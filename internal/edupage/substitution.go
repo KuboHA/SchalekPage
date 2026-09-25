@@ -60,6 +60,118 @@ func (c *Client) substitutionHTML(day time.Time) (string, error) {
 	return resp.R, nil
 }
 
+// SubstitutionDay fetches the substitution viewer for day exactly once and
+// derives both the class-filtered changes and the school's missing-teacher
+// list from that single response. TimetableChanges and MissingTeachers each
+// fetch the same HTML fragment, so calling them back to back from a request
+// handler made every substitutions page pay for two identical EduPage round
+// trips. Handlers should prefer this method.
+//
+// A non-nil error may still come with usable changes: when the viewer has
+// changes but the missing-teacher names cannot be resolved, changes is
+// returned alongside the error so the page can still render what it has.
+func (c *Client) SubstitutionDay(day time.Time) ([]TimetableChange, []Teacher, error) {
+	html, err := c.substitutionHTML(day)
+	if err != nil {
+		return nil, nil, err
+	}
+	if strings.TrimSpace(html) == "" {
+		return nil, nil, nil
+	}
+
+	changes := parseSubstitutionHTML(html)
+	missing, err := c.missingTeachersFromHTML(html)
+	return changes, missing, err
+}
+
+// MissingTeachers returns the teachers marked absent on the substitution
+// viewer for day (the "Missing teachers: ..." line at the top of the page),
+// resolved against the school's teacher list. It returns an empty slice and
+// a nil error when the day's substitution page names no missing teachers.
+func (c *Client) MissingTeachers(day time.Time) ([]Teacher, error) {
+	html, err := c.substitutionHTML(day)
+	if err != nil {
+		return nil, err
+	}
+	return c.missingTeachersFromHTML(html)
+}
+
+// missingTeachersFromHTML resolves the missing-teacher names embedded in an
+// already-fetched substitution viewer fragment. It exists so a single fetch
+// can feed both SubstitutionDay's views.
+func (c *Client) missingTeachersFromHTML(html string) ([]Teacher, error) {
+	if strings.TrimSpace(html) == "" {
+		return nil, nil
+	}
+
+	names, ok := parseMissingTeacherNames(html)
+	if !ok {
+		return nil, nil
+	}
+
+	allTeachers, err := c.Teachers()
+	if err != nil {
+		return nil, fmt.Errorf("edupage: missing teachers: %w", err)
+	}
+	byName := make(map[string]Teacher, len(allTeachers))
+	for _, t := range allTeachers {
+		byName[t.Name] = t
+	}
+
+	out := make([]Teacher, 0, len(names))
+	for _, name := range names {
+		t, ok := byName[name]
+		if !ok {
+			return nil, fmt.Errorf("edupage: missing teachers: unknown teacher %q (no longer at this school?)", name)
+		}
+		out = append(out, t)
+	}
+	return out, nil
+}
+
+// missingTeachersMarker is the substitution viewer's first
+// print-font-resizable span, which holds the "Missing teachers: A, B + C"
+// header line ahead of any per-class change sections.
+const missingTeachersMarker = `<span class="print-font-resizable">`
+
+// parseMissingTeacherNames ports Substitution.get_missing_teachers's HTML
+// scraping of the viewer's header line into a flat list of teacher names.
+// Names joined with " + " (co-taught lessons) are split apart, and a
+// trailing "  (...)" annotation on a name is dropped. ok is false when the
+// page has no missing-teachers line at all (or it's empty).
+func parseMissingTeacherNames(html string) ([]string, bool) {
+	idx := strings.Index(html, missingTeachersMarker)
+	if idx < 0 {
+		return nil, false
+	}
+	rest := html[idx+len(missingTeachersMarker):]
+	end := strings.Index(rest, "</span>")
+	if end < 0 {
+		return nil, false
+	}
+
+	raw := rest[:end]
+	if raw == "" {
+		return nil, false
+	}
+
+	parts := strings.SplitN(raw, ": ", 2)
+	if len(parts) != 2 || parts[1] == "" {
+		return nil, false
+	}
+
+	var names []string
+	for _, chunk := range strings.Split(parts[1], ", ") {
+		chunk = strings.TrimSpace(strings.SplitN(chunk, "  (", 2)[0])
+		for _, name := range strings.Split(chunk, " + ") {
+			if name = strings.TrimSpace(name); name != "" {
+				names = append(names, name)
+			}
+		}
+	}
+	return names, len(names) > 0
+}
+
 const (
 	substClassDelim  = `</div><div class="section print-nobreak"><div class="header"><span class="print-font-resizable">`
 	substRowsMarker  = `</span><div class="rows">`

@@ -9,6 +9,61 @@ import (
 	"time"
 )
 
+// IsOnlineLesson reports whether l has an online-lesson link attached (a
+// join URL for a video-call lesson), mirroring Lesson.is_online_lesson from
+// the Python reference.
+func (l Lesson) IsOnlineLesson() bool {
+	return l.OnlineLesson != ""
+}
+
+// SignIntoLesson marks the caller present for l's online lesson (see
+// Lesson.IsOnlineLesson). It mirrors the Python reference's
+// Lesson.sign_into_lesson: EduPage requires a gsec hash scoped to the
+// dashboard page, distinct from the one Client.GsecHash() caches from login,
+// so this scrapes a fresh one on every call.
+func (c *Client) SignIntoLesson(l Lesson) (bool, error) {
+	if !l.IsOnlineLesson() {
+		return false, fmt.Errorf("edupage: sign into lesson: lesson has no online lesson link")
+	}
+	if l.Subject == nil {
+		return false, fmt.Errorf("%w: lesson has no subject", ErrMissingData)
+	}
+
+	page, err := c.Get("/dashboard/eb.php")
+	if err != nil {
+		return false, fmt.Errorf("edupage: sign into lesson: %w", err)
+	}
+	gsh, ok := between(string(page), `gsechash="`, `"`)
+	if !ok {
+		return false, fmt.Errorf("%w: dashboard page has no gsechash", ErrMissingData)
+	}
+
+	payload := map[string]any{
+		"__args": []any{
+			nil,
+			map[string]any{
+				"click":     true,
+				"date":      time.Now().Format(eduDateLayout),
+				"ol_url":    l.OnlineLesson,
+				"subjectid": l.Subject.SubjectID,
+			},
+		},
+		"__gsh": gsh,
+	}
+
+	body, err := c.PostJSON("/dashboard/server/onlinelesson.js?__func=getOnlineLessonOpenUrl", payload)
+	if err != nil {
+		return false, fmt.Errorf("edupage: sign into lesson: %w", err)
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return false, fmt.Errorf("edupage: sign into lesson: decode response: %w", err)
+	}
+	_, signedIn := resp["reload"]
+	return signedIn, nil
+}
+
 // MyTimetable returns the logged-in user's own timetable ("my timetable") for
 // day. It returns (nil, nil) when EduPage simply has no plan for that day.
 //

@@ -38,7 +38,9 @@ The EduPage client is a port of the Python [edupage-api](https://github.com/Edup
 - Go 1.26+ (build only — the resulting binary has no runtime dependencies)
 - EduPage credentials for a valid student account
 
-No database, cache or external service is required.
+No database or external service is required. Pages are cached **on the
+device** by a service worker (see Performance below); nothing is cached on
+the server.
 
 ## 🛠️ Setup & Installation
 
@@ -119,11 +121,40 @@ Tokens and sessions are in-memory only (see Security Notes) and expire after 12 
 - **Timetable:** After 14:30, the dashboard automatically shows the next day's timetable to help students plan ahead.
 - **Substitutions:** Only substitutions relevant to the logged-in student's class are shown. Actions are normalized to lowercase strings (`change`, `add`, `remove`).
 
+## ⚡ Performance
+
+Every page is server-rendered, and the EduPage API calls behind it take a
+few hundred milliseconds. To keep navigation feeling instant, SchalekPage
+serves the page **and its assets from the device**:
+
+- A service worker (`/sw.js`) precaches the CSS, self-hosted Font Awesome
+  font and icons, and — for a short, time-boxed window — the HTML of the
+  primary destinations (dashboard, timetable, lunches, grades,
+  substitutions, homework, exams, messages). A page younger than 30 seconds is
+  served as-is; between 30 seconds and 10 minutes it is served immediately and
+  refreshed in the background; older than that the network is authoritative.
+- The authenticated pages are warmed in the background (on idle, and on
+  pointer/touch intent) so the next click is usually already on the device.
+- The page cache is dropped the moment the session ends: logging in or
+  out (both POSTs are intercepted), landing on the login/2FA screen, or any
+  response that redirects there clears it.
+- Cross-document view transitions fade between pages where the browser
+  supports them.
+- There are no third-party CDNs on the critical path; Font Awesome is
+  vendored under `internal/web/static/vendor/`.
+
+Responses carry a `Server-Timing` header (`total;dur`, `render;dur`), so
+`curl -D -` or the browser's network panel shows where time went.
+
 ## 🔐 Security Notes
 
 - Sessions are **server-side**. The browser only ever holds an opaque, random session id in an `HttpOnly`, `SameSite=Lax` cookie; the EduPage password never leaves the login handler and is never stored. This is a deliberate departure from the previous Flask implementation, which kept the plaintext password in a client-side cookie session and re-authenticated on every request.
 - Sessions expire after a period of inactivity and are reaped in the background.
 - The session store is in-memory, so restarting the server logs everyone out.
+- The service worker's page cache holds rendered HTML (grades, timetable,
+  notifications) on the device for at most 10 minutes. It is cleared on
+  login and logout and whenever an authenticated page is redirected to the
+  login screen, so it does not outlive the session beyond that window.
 
 ## 🔀 Differences from the Python version
 

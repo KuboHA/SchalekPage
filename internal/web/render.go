@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"net/http"
+	"time"
 )
 
 // render executes the named template into a buffer first (so a mid-render
@@ -19,11 +20,13 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 // be a WriteHeader call bolted on by the caller.
 func (s *Server) renderStatus(w http.ResponseWriter, r *http.Request, name string, data any, status int) {
 	var buf bytes.Buffer
+	renderStart := time.Now()
 	if err := s.templates.ExecuteTemplate(&buf, name, data); err != nil {
 		s.logger.Error("template render failed", "template", name, "path", r.URL.Path, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	setServerTiming(w, r, time.Since(renderStart))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = buf.WriteTo(w)

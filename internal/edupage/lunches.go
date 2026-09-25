@@ -345,6 +345,57 @@ func buildMealChoiceRequest(m *Meal, choice string) (url.Values, error) {
 	}, nil
 }
 
+// RateMeal submits a quantity/quality rating (EduPage's own 1-5 scale) for
+// the served lunch on m's date, on behalf of the diner m.BoarderID. It
+// mirrors the Python reference's Rating.rate — note that EduPage's rating
+// endpoint always rates "jedlo_dna" (meal-of-the-day) 2, i.e. lunch, no
+// matter which of the day's meals m is.
+func (c *Client) RateMeal(m *Meal, quantity, quality int) error {
+	if m == nil {
+		return fmt.Errorf("meal is nil")
+	}
+	if m.BoarderID == "" {
+		return fmt.Errorf("%w: meal has no boarder id", ErrMissingData)
+	}
+
+	values := url.Values{
+		"akcia":      {"ulozHodnotenia"},
+		"stravnikid": {m.BoarderID},
+		"mysqlDate":  {m.Date.Format(eduDateLayout)},
+		"jedlo_dna":  {"2"},
+		"kvalita":    {strconv.Itoa(quality)},
+		"mnozstvo":   {strconv.Itoa(quantity)},
+	}
+
+	body, err := c.PostForm("/menu/", values)
+	if err != nil {
+		return fmt.Errorf("edupage: rate meal: %w", err)
+	}
+	if err := checkRatingError(body); err != nil {
+		return fmt.Errorf("edupage: rate meal: %w", err)
+	}
+	return nil
+}
+
+// checkRatingError inspects a raw response from /menu/'s ulozHodnotenia
+// action. Unlike the other canteen writes (see checkMealWriteError), success
+// here requires an explicit, empty "error" field — a missing field, an
+// unparseable body, or a non-empty error field all mean failure. This
+// mirrors the Python reference's Rating.rate exactly, including its
+// stricter-than-usual check.
+func checkRatingError(body []byte) error {
+	var resp struct {
+		Error *string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	if resp.Error == nil || *resp.Error != "" {
+		return fmt.Errorf("rating was rejected")
+	}
+	return nil
+}
+
 // checkMealWriteError inspects a raw response from /menu/ for an
 // application-level failure. EduPage answers this endpoint with HTTP 200
 // whether or not the write succeeded; failure is signalled by a JSON object

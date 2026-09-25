@@ -15,10 +15,16 @@ type periodView struct {
 	HasPeriod   bool
 	TimeDisplay string // "08:00 - 08:45", or "Cancelled" when times are missing
 	StartTime   string // "08:00", empty when missing
-	Subject     string // display name; empty means "no subject"
-	HasSubject  bool
-	Classrooms  string
-	Teachers    string
+	// EndTime is the lesson's finish ("08:45"), empty when missing. The
+	// dashboard's "up next" block needs both ends of the window to tell a
+	// lesson that is running now from one that is still ahead; it used to
+	// guess from a bell table hardcoded in the template, which was wrong
+	// for any school that doesn't ring on those exact minutes.
+	EndTime    string
+	Subject    string // display name; empty means "no subject"
+	HasSubject bool
+	Classrooms string
+	Teachers   string
 
 	// IsCancelled marks a lesson EduPage removed or flagged absent. A
 	// cancelled lesson must never render like one that is going ahead.
@@ -75,6 +81,7 @@ func buildPeriodView(l edupage.Lesson, titleCased bool) periodView {
 	if !l.StartTime.IsZero() && !l.EndTime.IsZero() {
 		pv.TimeDisplay = l.StartTime.Format("15:04") + " - " + l.EndTime.Format("15:04")
 		pv.StartTime = l.StartTime.Format("15:04")
+		pv.EndTime = l.EndTime.Format("15:04")
 	} else {
 		pv.TimeDisplay = "Cancelled"
 	}

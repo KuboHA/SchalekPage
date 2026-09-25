@@ -1,9 +1,34 @@
 package edupage
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
+
+func TestIsOnlineLesson(t *testing.T) {
+	if (Lesson{}).IsOnlineLesson() {
+		t.Error("empty lesson should not be an online lesson")
+	}
+	if !(Lesson{OnlineLesson: "https://example.com/join"}).IsOnlineLesson() {
+		t.Error("lesson with an online lesson link should be an online lesson")
+	}
+}
+
+func TestSignIntoLesson_NotOnline(t *testing.T) {
+	c := New(0)
+	if _, err := c.SignIntoLesson(Lesson{}); err == nil {
+		t.Error("expected an error for a non-online lesson")
+	}
+}
+
+func TestSignIntoLesson_NoSubject(t *testing.T) {
+	c := New(0)
+	l := Lesson{OnlineLesson: "https://example.com/join"}
+	if _, err := c.SignIntoLesson(l); !errors.Is(err, ErrMissingData) {
+		t.Errorf("expected ErrMissingData, got %v", err)
+	}
+}
 
 func TestCombineDayTime(t *testing.T) {
 	day := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
